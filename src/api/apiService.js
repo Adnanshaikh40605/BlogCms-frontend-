@@ -100,6 +100,14 @@ const commentAPI = {
     return response.json();
   },
   
+  // Get approved comments with pagination
+  getApprovedComments: async (page = 1, pageSize = 10) => {
+    const url = `${API_URL}/api/comments/?approved=true&page=${page}&page_size=${pageSize}`;
+    console.log('Fetching approved comments from:', url);
+    const response = await fetch(url);
+    return response.json();
+  },
+  
   // Create new comment
   create: async (commentData) => {
     const response = await fetch(`${API_URL}/api/comments/`, {
