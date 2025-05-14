@@ -1,8 +1,12 @@
 // src/api/apiService.js
 
 // Get environment variables with fallback to development values
-const API_URL = import.meta.env.VITE_API_URL || '';  // Use empty string for relative URLs
-const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || '/media/';
+// IMPORTANT: When deploying to Vercel, set the VITE_API_URL environment variable to your backend URL
+// For example: https://web-production-f03ff.up.railway.app (if your backend is deployed on Railway)
+const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-f03ff.up.railway.app';  // Fallback to deployed backend URL
+const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || 'https://web-production-f03ff.up.railway.app/media/';
+
+console.log('Using API URL:', API_URL);
 
 // Helper function to get cookies (for CSRF token)
 function getCookie(name) {
