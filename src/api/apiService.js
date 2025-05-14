@@ -3,8 +3,14 @@
 // Get environment variables with fallback to development values
 // IMPORTANT: When deploying to Vercel, set the VITE_API_URL environment variable to your backend URL
 // For example: https://web-production-f03ff.up.railway.app (if your backend is deployed on Railway)
-const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-f03ff.up.railway.app';  // Fallback to deployed backend URL
-const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || 'https://web-production-f03ff.up.railway.app/media/';
+const DEFAULT_API_URL = 'https://web-production-f03ff.up.railway.app';
+const API_URL = (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== 'undefined') 
+  ? import.meta.env.VITE_API_URL 
+  : DEFAULT_API_URL;
+  
+const MEDIA_URL = (import.meta.env.VITE_MEDIA_URL && import.meta.env.VITE_MEDIA_URL !== 'undefined') 
+  ? import.meta.env.VITE_MEDIA_URL 
+  : `${API_URL}/media/`;
 
 console.log('Using API URL:', API_URL);
 console.log('Using MEDIA URL:', MEDIA_URL);
