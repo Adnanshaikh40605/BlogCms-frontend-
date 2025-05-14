@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import BlogPostCard from '../components/BlogPostCard';
 import Button from '../components/Button';
-import { blogPostService } from '../api/api';
+import { postAPI } from '../api/apiService';
 
 const Container = styled.div`
   width: 100%;
@@ -97,7 +97,7 @@ const PostListPage = () => {
           params.published = false;
         }
         
-        const data = await blogPostService.getAllPosts(params);
+        const data = await postAPI.getAll(params);
         // Ensure we have an array before setting state
         setPosts(Array.isArray(data.results) ? data.results : []);
         setError(null);

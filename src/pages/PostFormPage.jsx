@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import RichTextEditor from '../components/RichTextEditor';
 import Button from '../components/Button';
-import { blogPostService } from '../api/api';
+import { postAPI } from '../api/apiService';
 
 const Container = styled.div`
   width: 100%;
@@ -312,7 +312,7 @@ const PostFormPage = () => {
   const fetchPost = async () => {
     try {
       setLoading(true);
-      const data = await blogPostService.getPost(id);
+      const data = await postAPI.getById(id);
       
       setFormData({
         title: data.title || '',
@@ -448,10 +448,10 @@ const PostFormPage = () => {
       setLoading(true);
       
       if (isEditMode) {
-        await blogPostService.updatePost(id, formData);
+        await postAPI.update(id, formData);
         navigate(`/posts`);
       } else {
-        const newPost = await blogPostService.createPost(formData);
+        const newPost = await postAPI.create(formData);
         navigate(`/posts`);
       }
     } catch (error) {

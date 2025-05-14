@@ -25,6 +25,7 @@ import CommentsPage from './pages/CommentsPage';
 import BlogListPage from './pages/BlogListPage';
 import BlogPage from './pages/BlogPage';
 import BlogPostPage from './pages/BlogPostPage';
+import DiagnosticPage from './pages/DiagnosticPage';
 
 // Add a global loading indicator component
 const LoadingIndicator = styled.div`
@@ -173,6 +174,9 @@ const App = () => {
               {/* Public blog routes */}
               <Route path="blog" element={<BlogListPage />} />
               <Route path="blog/:id" element={<BlogPostPage />} />
+              
+              {/* Diagnostic route */}
+              <Route path="diagnostics" element={<DiagnosticPage />} />
             </Route>
           </Routes>
         </Router>

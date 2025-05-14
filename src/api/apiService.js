@@ -7,6 +7,44 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://web-production-f03ff.up
 const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || 'https://web-production-f03ff.up.railway.app/media/';
 
 console.log('Using API URL:', API_URL);
+console.log('Using MEDIA URL:', MEDIA_URL);
+
+// Add health check to verify API connection
+const checkApiHealth = async () => {
+  try {
+    console.log('Running API health check...');
+    
+    // Use the detailed health check for more comprehensive information
+    const healthResults = await debugAPI.runDetailedHealthCheck();
+    
+    // Log detailed results
+    console.log('Health check results:', healthResults);
+    
+    if (healthResults.basicApiConnection) {
+      console.log('✅ API connection successful! Backend is reachable.');
+      
+      // Check database connection
+      if (healthResults.databaseConnection) {
+        console.log('✅ Database connection successful!');
+      } else {
+        console.error('❌ Database connection failed!', 
+          healthResults.errors.find(e => e.test === 'databaseConnection')?.message || 'Unknown error');
+      }
+      
+      return healthResults.basicApiConnection && healthResults.databaseConnection;
+    } else {
+      console.error('❌ API connection failed!', 
+        healthResults.errors.find(e => e.test === 'basicApiConnection')?.message || 'Unknown error');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ API health check failed!', error.message);
+    return false;
+  }
+};
+
+// Run health check on load
+checkApiHealth();
 
 // Helper function to get cookies (for CSRF token)
 function getCookie(name) {
@@ -67,7 +105,31 @@ const postAPI = {
     try {
       const queryParams = new URLSearchParams(params).toString();
       const url = queryParams ? `${API_URL}/api/posts/?${queryParams}` : `${API_URL}/api/posts/`;
+      
+      console.log('Fetching posts from URL:', url);
+      
+      try {
+        // First try to ping the API to check if it's responding
+        const healthCheck = await fetch(`${API_URL}/debug-info/`, { method: 'GET' });
+        if (!healthCheck.ok) {
+          console.error('API health check failed:', healthCheck.status, healthCheck.statusText);
+        } else {
+          console.log('API health check successful');
+        }
+      } catch (healthError) {
+        console.error('API health check error:', healthError);
+      }
+      
       const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`API Error: ${response.status} - ${response.statusText}`, errorText);
+        
+        // Provide more detailed error information for debugging
+        throw new Error(`Server error (${response.status}): ${errorText || response.statusText}`);
+      }
+      
       return handleResponse(response);
     } catch (error) {
       console.error('API Error fetching posts:', error);
@@ -463,6 +525,122 @@ const debugAPI = {
       return handleResponse(response);
     } catch (error) {
       console.error('API Error fetching debug info:', error);
+      throw error;
+    }
+  },
+  
+  // Test database connection
+  testDatabaseConnection: async () => {
+    try {
+      console.log('Testing database connection...');
+      
+      // First, try the test-db endpoint with trailing slash
+      try {
+        const response = await fetch(`${API_URL}/test-db/`);
+        return handleResponse(response);
+      } catch (error) {
+        console.log('Error with /test-db/, trying without trailing slash...');
+        // If first attempt fails, try without the trailing slash
+        const response = await fetch(`${API_URL}/test-db`);
+        return handleResponse(response);
+      }
+    } catch (error) {
+      console.error('API Error testing database connection:', error);
+      
+      // Provide more specific error information for common Railway database issues
+      const errorMsg = error.message || '';
+      if (errorMsg.includes('Failed to fetch')) {
+        return {
+          status: 'error',
+          error_type: 'ConnectionError',
+          error_message: 'Failed to connect to the API server. The server may be down or unreachable.',
+          railway_specific: 'Check if your Railway service is deployed and running correctly.'
+        };
+      }
+      
+      throw error;
+    }
+  },
+  
+  // Run detailed health check
+  runDetailedHealthCheck: async () => {
+    const results = {
+      basicApiConnection: false,
+      debugInfoAvailable: false,
+      databaseConnection: false,
+      errors: [],
+      railwaySpecificChecks: {
+        isRailwayEnvironment: false
+      }
+    };
+    
+    try {
+      // Basic API check
+      try {
+        const response = await fetch(`${API_URL}/`);
+        results.basicApiConnection = response.ok;
+        
+        // Check if we're running on Railway
+        const host = response.headers.get('host') || '';
+        if (host.includes('railway.app')) {
+          results.railwaySpecificChecks.isRailwayEnvironment = true;
+        }
+      } catch (error) {
+        results.errors.push({
+          test: 'basicApiConnection',
+          message: `API connection failed: ${error.message}`,
+          details: error.toString()
+        });
+      }
+      
+      // Debug info check
+      try {
+        const debugInfo = await debugAPI.getDebugInfo();
+        results.debugInfoAvailable = true;
+        results.debugInfo = debugInfo;
+        
+        // Check if debug info contains database information
+        if (debugInfo.database) {
+          results.databaseInfo = {
+            type: debugInfo.database,
+            debug_mode: debugInfo.settings_debug,
+            allowed_hosts: debugInfo.allowed_hosts
+          };
+        }
+      } catch (error) {
+        results.errors.push({
+          test: 'debugInfoAvailable',
+          message: `Debug info check failed: ${error.message}`,
+          details: error.toString()
+        });
+      }
+      
+      // Database connection check
+      try {
+        const dbTest = await debugAPI.testDatabaseConnection();
+        results.databaseConnection = dbTest.status === 'success';
+        results.databaseTestDetails = dbTest;
+      } catch (error) {
+        results.errors.push({
+          test: 'databaseConnection',
+          message: `Database connection failed: ${error.message}`,
+          details: error.toString()
+        });
+      }
+      
+      // Specific Railway database checks if in Railway environment
+      if (results.railwaySpecificChecks.isRailwayEnvironment) {
+        results.railwaySpecificChecks.recommendations = [
+          'Verify DATABASE_URL environment variable is properly set in Railway',
+          'Check if your PostgreSQL service is running in Railway',
+          'Make sure your app has the correct connection parameters',
+          'Verify network connectivity between your Railway services'
+        ];
+      }
+      
+      return results;
+    } catch (error) {
+      console.error('Error running health check:', error);
       throw error;
     }
   }

@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import Button from '../components/Button';
 import Comment from '../components/Comment';
 import CommentForm from '../components/CommentForm';
-import { blogPostService, commentService } from '../api/api';
+import { postAPI, commentAPI } from '../api/apiService';
 import { formatDate } from '../utils/dateUtils';
 import placeholderImage from '../assets/placeholder-image.js';
 
@@ -217,12 +217,12 @@ const PostDetailPage = () => {
   const fetchComments = async () => {
     try {
       // Fetch approved comments for the post
-      const approvedCommentsData = await commentService.getComments(id, true);
-      setComments(approvedCommentsData);
+      const approvedCommentsData = await commentAPI.getAll({ post: id, approved: true });
+      setComments(Array.isArray(approvedCommentsData.results) ? approvedCommentsData.results : []);
 
       // Also fetch pending comments for this post
-      const pendingCommentsData = await commentService.getComments(id, false);
-      setPendingComments(pendingCommentsData);
+      const pendingCommentsData = await commentAPI.getAll({ post: id, approved: false });
+      setPendingComments(Array.isArray(pendingCommentsData.results) ? pendingCommentsData.results : []);
     } catch (err) {
       console.error('Error fetching comments:', err);
     }
@@ -232,7 +232,7 @@ const PostDetailPage = () => {
     const fetchPost = async () => {
       try {
         setLoading(true);
-        const data = await blogPostService.getPost(id);
+        const data = await postAPI.getById(id);
         setPost(data);
         
         // Fetch comments
@@ -253,7 +253,7 @@ const PostDetailPage = () => {
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
       try {
-        await blogPostService.deletePost(id);
+        await postAPI.delete(id);
         navigate('/posts');
       } catch (err) {
         console.error('Error deleting post:', err);
@@ -264,7 +264,7 @@ const PostDetailPage = () => {
   
   const handlePublishToggle = async () => {
     try {
-      await blogPostService.updatePost(id, {
+      await postAPI.update(id, {
         published: !post.published
       });
       setPost({
@@ -277,8 +277,16 @@ const PostDetailPage = () => {
     }
   };
   
-  const handleCommentSubmitted = async () => {
-    await fetchComments();
+  const handleCommentSubmitted = async (commentData) => {
+    try {
+      // Create the comment
+      await commentAPI.create(commentData);
+      // Refresh comments list
+      await fetchComments();
+    } catch (err) {
+      console.error('Error submitting comment:', err);
+      alert('Failed to submit comment. Please try again.');
+    }
   };
   
   const openImageModal = (imageUrl) => {

@@ -135,6 +135,27 @@ const MobileMenuButton = styled.button`
   }
 `;
 
+const DiagnosticButton = styled(Link)`
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-left: 1rem;
+  
+  &:hover {
+    background-color: #f5c6cb;
+  }
+  
+  @media (max-width: 768px) {
+    margin: 0.5rem 0;
+    width: 100%;
+    text-align: center;
+  }
+`;
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
@@ -192,6 +213,14 @@ const Header = () => {
             >
               Comments
             </NavLink>
+            
+            <DiagnosticButton
+              to="/diagnostics" 
+              className={location.pathname === '/diagnostics' ? 'active' : ''}
+              onClick={closeMenu}
+            >
+              Diagnose API
+            </DiagnosticButton>
           </NavLinkGroup>
         </NavLinks>
       </Nav>

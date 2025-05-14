@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { blogPostService } from '../api/api';
+import { postAPI } from '../api/apiService';
 
 const BlogContainer = styled.div`
   max-width: 800px;
@@ -129,7 +129,7 @@ const BlogPage = () => {
     const fetchPost = async () => {
       try {
         setLoading(true);
-        const response = await blogPostService.getPost(id);
+        const response = await postAPI.getById(id);
         setPost(response);
       } catch (err) {
         console.error('Error fetching blog post:', err);

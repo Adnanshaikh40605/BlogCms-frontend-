@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Comment from '../components/Comment';
-import { commentService } from '../api/api';
+import { commentAPI } from '../api/apiService';
 
 const Container = styled.div`
   width: 100%;
@@ -72,28 +72,25 @@ const CommentsPage = () => {
         
         let commentsData = [];
         if (filter === 'pending') {
-          // Use getPendingComments to get all pending comments
+          // Fetch pending comments
           console.log('CommentsPage - Fetching pending comments');
-          const pendingData = await commentService.getPendingComments(1, 10);
+          const pendingData = await commentAPI.getAll({ approved: false, page: 1, page_size: 10 });
           console.log('CommentsPage - Pending comments response:', pendingData);
           commentsData = Array.isArray(pendingData.results) ? pendingData.results : [];
         } else if (filter === 'approved') {
           // Get approved comments across all posts
           console.log('CommentsPage - Fetching approved comments');
-          const approvedData = await commentService.getComments(null, true, 1, 10);
+          const approvedData = await commentAPI.getAll({ approved: true, page: 1, page_size: 10 });
           console.log('CommentsPage - Approved comments response:', approvedData);
           commentsData = Array.isArray(approvedData.results) ? approvedData.results : [];
         } else {
           // For 'all' filter case
           try {
             console.log('CommentsPage - Fetching all comments');
-            // The updated getAllCommentsForPost function now handles null postId properly
-            const response = await commentService.getAllCommentsForPost(null);
+            // Get all comments (no filter)
+            const response = await commentAPI.getAll();
             console.log('CommentsPage - All comments response:', response);
-            commentsData = [
-              ...(Array.isArray(response.approved) ? response.approved : []), 
-              ...(Array.isArray(response.pending) ? response.pending : [])
-            ];
+            commentsData = Array.isArray(response.results) ? response.results : [];
           } catch (error) {
             console.warn('Error fetching comments:', error);
             setError('Failed to load all comments. Please try a different filter.');
@@ -123,7 +120,7 @@ const CommentsPage = () => {
   
   const handleApproveComment = async (commentId) => {
     try {
-      await commentService.approveComment(commentId);
+      await commentAPI.approve(commentId);
       
       // If we're viewing pending comments, remove the approved comment from the list
       if (filter === 'pending') {
@@ -142,7 +139,7 @@ const CommentsPage = () => {
   
   const handleRejectComment = async (commentId) => {
     try {
-      await commentService.rejectComment(commentId);
+      await commentAPI.reject(commentId);
       
       // Remove the rejected comment from the list
       setComments(comments.filter(comment => comment.id !== commentId));
