@@ -68,20 +68,28 @@ const CommentsPage = () => {
         setLoading(true);
         setError(null);
         
+        console.log('CommentsPage - Fetching comments with filter:', filter);
+        
         let commentsData = [];
         if (filter === 'pending') {
           // Use getPendingComments to get all pending comments
-          const pendingData = await commentService.getPendingComments();
+          console.log('CommentsPage - Fetching pending comments');
+          const pendingData = await commentService.getPendingComments(1, 10);
+          console.log('CommentsPage - Pending comments response:', pendingData);
           commentsData = Array.isArray(pendingData.results) ? pendingData.results : [];
         } else if (filter === 'approved') {
           // Get approved comments across all posts
-          const approvedData = await commentService.getComments(null, true);
+          console.log('CommentsPage - Fetching approved comments');
+          const approvedData = await commentService.getComments(null, true, 1, 10);
+          console.log('CommentsPage - Approved comments response:', approvedData);
           commentsData = Array.isArray(approvedData.results) ? approvedData.results : [];
         } else {
           // For 'all' filter case
           try {
+            console.log('CommentsPage - Fetching all comments');
             // The updated getAllCommentsForPost function now handles null postId properly
             const response = await commentService.getAllCommentsForPost(null);
+            console.log('CommentsPage - All comments response:', response);
             commentsData = [
               ...(Array.isArray(response.approved) ? response.approved : []), 
               ...(Array.isArray(response.pending) ? response.pending : [])
@@ -92,11 +100,14 @@ const CommentsPage = () => {
           }
         }
         
+        console.log('CommentsPage - Final comments data:', commentsData);
+        
         if (Array.isArray(commentsData) && commentsData.length > 0) {
           setComments(commentsData);
           setError(null);
         } else {
           setComments([]);
+          console.log('CommentsPage - No comments found for filter:', filter);
         }
       } catch (err) {
         console.error('Error fetching comments:', err);

@@ -1,0 +1,233 @@
+/**
+ * CKEditor 5 content styles
+ * These styles help ensure that CKEditor 5 content is properly displayed
+ */
+
+/* Main content container */
+.ck-content {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: #444;
+}
+
+/* Basic block elements */
+.ck-content p {
+  margin: 0 0 1.5rem;
+}
+
+.ck-content h1, .ck-content h2, .ck-content h3, .ck-content h4, .ck-content h5, .ck-content h6 {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #333;
+}
+
+.ck-content h1 {
+  font-size: 2.2rem;
+}
+
+.ck-content h2 {
+  font-size: 1.8rem;
+}
+
+.ck-content h3 {
+  font-size: 1.5rem;
+}
+
+.ck-content h4 {
+  font-size: 1.3rem;
+}
+
+/* Lists */
+.ck-content ul, .ck-content ol {
+  margin: 0 0 1.5rem;
+  padding-left: 2rem;
+}
+
+.ck-content li {
+  margin-bottom: 0.5rem;
+}
+
+.ck-content li ul, .ck-content li ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Links */
+.ck-content a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.ck-content a:hover {
+  text-decoration: underline;
+}
+
+/* Blockquotes */
+.ck-content blockquote {
+  border-left: 4px solid #ffcc00;
+  margin: 1.5rem 0;
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  font-style: italic;
+  color: #555;
+}
+
+/* Code blocks */
+.ck-content pre {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+
+.ck-content pre code {
+  font-family: Monaco, Menlo, Consolas, 'Courier New', monospace;
+  font-size: 0.9rem;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Inline code */
+.ck-content code {
+  font-family: Monaco, Menlo, Consolas, 'Courier New', monospace;
+  font-size: 0.9rem;
+  background-color: #f5f5f5;
+  border-radius: 3px;
+  padding: 0.2rem 0.4rem;
+}
+
+/* Images */
+.ck-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.ck-content figure.image {
+  display: table;
+  clear: both;
+  text-align: center;
+  margin: 1.5rem auto;
+}
+
+.ck-content figure.image img {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.ck-content figure.image.image-style-align-left {
+  float: left;
+  margin-right: 1.5rem;
+}
+
+.ck-content figure.image.image-style-align-right {
+  float: right;
+  margin-left: 1.5rem;
+}
+
+.ck-content figure.image > figcaption {
+  display: table-caption;
+  caption-side: bottom;
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+/* Tables */
+.ck-content .table {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+
+.ck-content table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.ck-content table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.ck-content table th, .ck-content table td {
+  border: 1px solid #e0e0e0;
+  padding: 0.5rem;
+}
+
+.ck-content table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.ck-content figure.table figcaption {
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+/* Horizontal rule */
+.ck-content hr {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 2rem 0;
+}
+
+/* Media embed */
+.ck-content .media {
+  margin: 1.5rem 0;
+  max-width: 100%;
+}
+
+.ck-content .media iframe {
+  max-width: 100%;
+  border: none;
+  border-radius: 4px;
+}
+
+/* Text highlight */
+.ck-content .marker-yellow {
+  background-color: #fff9c4;
+}
+
+.ck-content .marker-green {
+  background-color: #e8f5e9;
+}
+
+.ck-content .marker-pink {
+  background-color: #fce4ec;
+}
+
+.ck-content .marker-blue {
+  background-color: #e3f2fd;
+}
+
+/* Text alignment */
+.ck-content .text-center {
+  text-align: center;
+}
+
+.ck-content .text-right {
+  text-align: right;
+}
+
+.ck-content .text-justify {
+  text-align: justify;
+}
+
+/* Fix for CKEditor 5 figure containers */
+.ck-content figure {
+  margin: 1.5rem 0;
+}
+
+.ck-content figcaption {
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
+  margin-top: 0.5rem;
+} 

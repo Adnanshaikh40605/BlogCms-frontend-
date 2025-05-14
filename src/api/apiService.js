@@ -1,8 +1,8 @@
 // src/api/apiService.js
 
 // Get environment variables with fallback to development values
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || 'http://localhost:8000/media/';
+const API_URL = import.meta.env.VITE_API_URL || '';  // Use empty string for relative URLs
+const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || '/media/';
 
 // Helper function to get cookies (for CSRF token)
 function getCookie(name) {
@@ -30,8 +30,10 @@ const getHeaders = (includeContentType = true) => {
 // Post API functions
 const postAPI = {
   // Get all posts
-  getAll: async () => {
-    const response = await fetch(`${API_URL}/api/posts/`);
+  getAll: async (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    const url = queryParams ? `${API_URL}/api/posts/?${queryParams}` : `${API_URL}/api/posts/`;
+    const response = await fetch(url);
     return response.json();
   },
   
@@ -88,14 +90,109 @@ const postAPI = {
   }
 };
 
+// Image API functions
+const imageAPI = {
+  // Get all images
+  getAll: async () => {
+    const response = await fetch(`${API_URL}/api/images/`);
+    return response.json();
+  },
+  
+  // Get image by ID
+  getById: async (id) => {
+    const response = await fetch(`${API_URL}/api/images/${id}/`);
+    return response.json();
+  },
+  
+  // Upload new image
+  upload: async (imageFile, title = '', description = '') => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    
+    if (title) {
+      formData.append('title', title);
+    }
+    
+    if (description) {
+      formData.append('description', description);
+    }
+    
+    const response = await fetch(`${API_URL}/api/images/`, {
+      method: 'POST',
+      headers: getHeaders(false), // Don't include Content-Type for file uploads
+      credentials: 'include',
+      body: formData
+    });
+    return response.json();
+  },
+  
+  // Update image
+  update: async (id, imageData) => {
+    const formData = new FormData();
+    
+    if (imageData.image) {
+      formData.append('image', imageData.image);
+    }
+    
+    if (imageData.title) {
+      formData.append('title', imageData.title);
+    }
+    
+    if (imageData.description) {
+      formData.append('description', imageData.description);
+    }
+    
+    const response = await fetch(`${API_URL}/api/images/${id}/`, {
+      method: 'PUT',
+      headers: getHeaders(false), // Don't include Content-Type for file uploads
+      credentials: 'include',
+      body: formData
+    });
+    return response.json();
+  },
+  
+  // Partially update image
+  partialUpdate: async (id, imageData) => {
+    const formData = new FormData();
+    
+    if (imageData.image) {
+      formData.append('image', imageData.image);
+    }
+    
+    if (imageData.title) {
+      formData.append('title', imageData.title);
+    }
+    
+    if (imageData.description) {
+      formData.append('description', imageData.description);
+    }
+    
+    const response = await fetch(`${API_URL}/api/images/${id}/`, {
+      method: 'PATCH',
+      headers: getHeaders(false), // Don't include Content-Type for file uploads
+      credentials: 'include',
+      body: formData
+    });
+    return response.json();
+  },
+  
+  // Delete image
+  delete: async (id) => {
+    const response = await fetch(`${API_URL}/api/images/${id}/`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+      credentials: 'include'
+    });
+    return response.status === 204; // Returns true if successfully deleted
+  }
+};
+
 // Comment API functions
 const commentAPI = {
-  // Get all comments (with optional post ID filter)
-  getAll: async (postId = null) => {
-    let url = `${API_URL}/api/comments/`;
-    if (postId) {
-      url += `?post=${postId}`;
-    }
+  // Get all comments (with optional filtering)
+  getAll: async (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    const url = queryParams ? `${API_URL}/api/comments/?${queryParams}` : `${API_URL}/api/comments/`;
     const response = await fetch(url);
     return response.json();
   },
@@ -105,6 +202,12 @@ const commentAPI = {
     const url = `${API_URL}/api/comments/?approved=true&page=${page}&page_size=${pageSize}`;
     console.log('Fetching approved comments from:', url);
     const response = await fetch(url);
+    return response.json();
+  },
+  
+  // Get a specific comment
+  getById: async (id) => {
+    const response = await fetch(`${API_URL}/api/comments/${id}/`);
     return response.json();
   },
   
@@ -119,6 +222,38 @@ const commentAPI = {
     return response.json();
   },
   
+  // Update comment
+  update: async (id, commentData) => {
+    const response = await fetch(`${API_URL}/api/comments/${id}/`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(commentData)
+    });
+    return response.json();
+  },
+  
+  // Partially update comment
+  partialUpdate: async (id, commentData) => {
+    const response = await fetch(`${API_URL}/api/comments/${id}/`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(commentData)
+    });
+    return response.json();
+  },
+  
+  // Delete comment
+  delete: async (id) => {
+    const response = await fetch(`${API_URL}/api/comments/${id}/`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+      credentials: 'include'
+    });
+    return response.status === 204; // Returns true if successfully deleted
+  },
+  
   // Approve a comment
   approve: async (id) => {
     const response = await fetch(`${API_URL}/api/comments/${id}/approve/`, {
@@ -129,9 +264,47 @@ const commentAPI = {
     return response.json();
   },
   
+  // Reject a comment
+  reject: async (id) => {
+    const response = await fetch(`${API_URL}/api/comments/${id}/reject/`, {
+      method: 'POST',
+      headers: getHeaders(),
+      credentials: 'include'
+    });
+    return response.json();
+  },
+  
+  // Bulk approve comments
+  bulkApprove: async (commentIds) => {
+    const response = await fetch(`${API_URL}/api/comments/bulk_approve/`, {
+      method: 'POST',
+      headers: getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ comment_ids: commentIds })
+    });
+    return response.json();
+  },
+  
+  // Bulk reject comments
+  bulkReject: async (commentIds) => {
+    const response = await fetch(`${API_URL}/api/comments/bulk_reject/`, {
+      method: 'POST',
+      headers: getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ comment_ids: commentIds })
+    });
+    return response.json();
+  },
+  
   // Get pending comment count
   getPendingCount: async () => {
     const response = await fetch(`${API_URL}/api/comments/pending-count/`);
+    return response.json();
+  },
+  
+  // Get all comments for a post (both approved and pending)
+  getAllForPost: async (postId) => {
+    const response = await fetch(`${API_URL}/api/comments/all/?post=${postId}`);
     return response.json();
   }
 };
@@ -148,6 +321,7 @@ export {
   API_URL,
   MEDIA_URL,
   postAPI,
+  imageAPI,
   commentAPI,
   mediaAPI
 }; 

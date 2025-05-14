@@ -6,24 +6,24 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    // Commenting out proxy as we're now using the deployed Railway backend
-    // proxy: {
-    //   '/api': {
-    //     target: 'http://localhost:8000',
-    //     changeOrigin: true,
-    //     secure: false,
-    //   },
-    //   '/media': {
-    //     target: 'http://localhost:8000',
-    //     changeOrigin: true,
-    //     secure: false,
-    //   },
-    //   '/ckeditor': {
-    //     target: 'http://localhost:8000',
-    //     changeOrigin: true,
-    //     secure: false,
-    //   }
-    // }
+    // Proxy API requests to Django backend
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/media': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/ckeditor': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'styled-components']

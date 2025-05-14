@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import Button from './Button';
 import { sanitizeAsText } from '../utils/sanitize';
-import { commentAPI } from '../api/apiService';
 
 const FormContainer = styled.div`
   margin: 1.5rem 0;
@@ -19,7 +18,29 @@ const Label = styled.label`
   color: #495057;
 `;
 
+const Input = styled.input`
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+  color: inherit;
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+  
+  &::placeholder {
+    color: #adb5bd;
+  }
+`;
+
 const Textarea = styled.textarea`
+  width: 100%;
   padding: 0.75rem;
   border: 1px solid #ced4da;
   border-radius: 4px;
@@ -72,117 +93,128 @@ const KeyboardShortcut = styled.kbd`
   font-size: 0.8rem;
 `;
 
-const CommentForm = ({ postId, onCommentSubmitted }) => {
+const CommentForm = ({ 
+  postId, 
+  onCommentSubmitted, 
+  showCommentForm = true, 
+  setShowCommentForm = () => {}, 
+  isSubmitting = false 
+}) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [content, setContent] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const [isFormVisible, setIsFormVisible] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [localError, setLocalError] = useState(null);
+  const textareaRef = useRef(null);
+  
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Submit on Ctrl+Enter
+      if (event.ctrlKey && event.key === 'Enter' && showCommentForm) {
+        const form = textareaRef.current?.form;
+        if (form) form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showCommentForm]);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Basic validation
     if (!content.trim()) {
-      setError('Please enter a comment.');
+      setLocalError('Please enter a comment.');
       return;
     }
     
     if (!name.trim()) {
-      setError('Please enter your name.');
+      setLocalError('Please enter your name.');
       return;
     }
     
     if (!email.trim()) {
-      setError('Please enter your email.');
+      setLocalError('Please enter your email.');
       return;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address.');
+      setLocalError('Please enter a valid email address.');
       return;
     }
     
-    try {
-      setIsSubmitting(true);
-      setError(null);
-      
-      // Prepare comment data
-      const commentData = {
-        post: postId,
-        author_name: name,
-        author_email: email,
-        content
-      };
-      
-      // Send the comment using the API service directly
-      await commentAPI.create(commentData);
-      
-      // Reset form
-      setName('');
-      setEmail('');
-      setContent('');
-      setSubmitted(true);
-      setIsFormVisible(false);
-      
-      // Call the callback if provided
-      if (onCommentSubmitted) {
-        onCommentSubmitted(commentData);
+    setLocalError(null);
+    
+    // Prepare comment data
+    const commentData = {
+      post: postId,
+      author_name: name,
+      author_email: email,
+      content
+    };
+    
+    // Call the callback if provided
+    if (onCommentSubmitted) {
+      try {
+        await onCommentSubmitted(commentData);
+        // Reset form
+        setName('');
+        setEmail('');
+        setContent('');
+      } catch (err) {
+        console.error('Error submitting comment:', err);
+        setLocalError('Failed to submit comment. Please try again later.');
       }
-    } catch (err) {
-      console.error('Error submitting comment:', err);
-      setError('Failed to submit comment. Please try again later.');
-    } finally {
-      setIsSubmitting(false);
     }
   };
   
+  if (!showCommentForm) {
+    return null;
+  }
+  
   return (
     <FormContainer>
-      {submitted && (
-        <SuccessMessage>
-          Your comment has been submitted and is awaiting approval.
-        </SuccessMessage>
-      )}
-      
       <form onSubmit={handleSubmit}>
         <FormGroup>
           <Label htmlFor="name">Name</Label>
-          <input
+          <Input
             id="name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter your name"
+            required
+            disabled={isSubmitting}
           />
-          {error && <ErrorMessage>{error}</ErrorMessage>}
         </FormGroup>
         
         <FormGroup>
           <Label htmlFor="email">Email</Label>
-          <input
+          <Input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
+            required
+            disabled={isSubmitting}
           />
-          {error && <ErrorMessage>{error}</ErrorMessage>}
         </FormGroup>
         
         <FormGroup>
           <Label htmlFor="content">Comment</Label>
           <Textarea
             id="content"
+            ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Write your comment here..."
             rows={5}
+            required
+            disabled={isSubmitting}
           />
-          {error && <ErrorMessage>{error}</ErrorMessage>}
+          {localError && <ErrorMessage>{localError}</ErrorMessage>}
         </FormGroup>
         
         <Button

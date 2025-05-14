@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { COMMENT_ENDPOINTS } from './apiEndpoints';
 
 // Use the full URL from the environment variable, without any relative path logic
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -53,7 +54,7 @@ export const blogPostService = {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
-        const response = await api.get('/posts/', { 
+        const response = await api.get('/api/posts/', { 
           params,
           headers: {
             'Cache-Control': 'max-age=300',
@@ -124,7 +125,7 @@ export const blogPostService = {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
-        const response = await api.get(`/posts/${id}/`, {
+        const response = await api.get(`/api/posts/${id}/`, {
           headers: {
             'Cache-Control': 'max-age=300',
           },
@@ -177,7 +178,7 @@ export const blogPostService = {
         });
       }
       
-      const response = await api.post('/posts/', formData, {
+      const response = await api.post('/api/posts/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -210,7 +211,7 @@ export const blogPostService = {
         });
       }
       
-      const response = await api.patch(`/posts/${id}/`, formData, {
+      const response = await api.patch(`/api/posts/${id}/`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -226,7 +227,7 @@ export const blogPostService = {
   // Delete a blog post
   deletePost: async (id) => {
     try {
-      const response = await api.delete(`/posts/${id}/`);
+      const response = await api.delete(`/api/posts/${id}/`);
       return response.data;
     } catch (error) {
       console.error(`Error deleting post with id ${id}:`, error);
@@ -243,7 +244,7 @@ export const blogPostService = {
         formData.append('images', image);
       });
       
-      const response = await api.post(`/posts/${postId}/upload_images/`, formData, {
+      const response = await api.post(`/api/posts/${postId}/upload_images/`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -311,7 +312,8 @@ export const commentService = {
   // Get comments for a post with pagination
   getComments: async (postId, approved = true, page = 1, pageSize = 10) => {
     try {
-      const response = await api.get('/comments/', { 
+      console.log(`Fetching comments with URL: ${COMMENT_ENDPOINTS.LIST} and params:`, { post: postId, approved, page, page_size: pageSize });
+      const response = await api.get(COMMENT_ENDPOINTS.LIST, { 
         params: { 
           post: postId, 
           approved,
@@ -320,6 +322,7 @@ export const commentService = {
         } 
       });
       
+      console.log('Comments API response:', response.data);
       return {
         results: response.data.results || response.data,
         count: response.data.count || response.data.length,
@@ -360,7 +363,7 @@ export const commentService = {
       
       console.log(`[${timestamp}] Sending complete comment data:`, completeCommentData);
       
-      const response = await api.post('/comments/', completeCommentData);
+      const response = await api.post(COMMENT_ENDPOINTS.LIST, completeCommentData);
       console.log(`[${timestamp}] Comment submitted successfully:`, response.data);
       return response.data;
     } catch (error) {
@@ -380,7 +383,8 @@ export const commentService = {
   // Get all pending (unapproved) comments
   getPendingComments: async (page = 1, pageSize = 10) => {
     try {
-      const response = await api.get('/comments/', { 
+      console.log(`Fetching pending comments with URL: ${COMMENT_ENDPOINTS.LIST} and params:`, { approved: false, page, page_size: pageSize });
+      const response = await api.get(COMMENT_ENDPOINTS.LIST, { 
         params: { 
           approved: false,
           page,
@@ -388,6 +392,7 @@ export const commentService = {
         } 
       });
       
+      console.log('Pending comments API response:', response.data);
       return {
         results: response.data.results || response.data,
         count: response.data.count || response.data.length,
@@ -403,7 +408,7 @@ export const commentService = {
   // Get pending comments count
   getPendingCommentsCount: async () => {
     try {
-      const response = await api.get('/comments/pending-count/');
+      const response = await api.get(COMMENT_ENDPOINTS.PENDING_COUNT);
       return response.data.count;
     } catch (error) {
       console.error('Error fetching pending comments count:', error);
@@ -414,7 +419,7 @@ export const commentService = {
   // Bulk approve comments
   bulkApproveComments: async (commentIds) => {
     try {
-      const response = await api.post('/comments/bulk-approve/', { comment_ids: commentIds });
+      const response = await api.post(COMMENT_ENDPOINTS.BULK_APPROVE, { comment_ids: commentIds });
       return response.data;
     } catch (error) {
       console.error('Error bulk approving comments:', error);
@@ -425,7 +430,7 @@ export const commentService = {
   // Bulk reject comments
   bulkRejectComments: async (commentIds) => {
     try {
-      const response = await api.post('/comments/bulk-reject/', { comment_ids: commentIds });
+      const response = await api.post(COMMENT_ENDPOINTS.BULK_REJECT, { comment_ids: commentIds });
       return response.data;
     } catch (error) {
       console.error('Error bulk rejecting comments:', error);
@@ -436,7 +441,7 @@ export const commentService = {
   // Approve a comment
   approveComment: async (commentId) => {
     try {
-      const response = await api.post(`/comments/${commentId}/approve/`);
+      const response = await api.post(COMMENT_ENDPOINTS.APPROVE(commentId));
       return response.data;
     } catch (error) {
       console.error(`Error approving comment with id ${commentId}:`, error);
@@ -447,7 +452,7 @@ export const commentService = {
   // Reject a comment
   rejectComment: async (commentId) => {
     try {
-      const response = await api.post(`/comments/${commentId}/reject/`);
+      const response = await api.post(COMMENT_ENDPOINTS.REJECT(commentId));
       return response.data;
     } catch (error) {
       console.error(`Error rejecting comment with id ${commentId}:`, error);
@@ -475,7 +480,7 @@ export const commentService = {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
-        const response = await api.get('/comments/all/', { 
+        const response = await api.get(COMMENT_ENDPOINTS.ALL_FOR_POST, { 
           params: { post: postId },
           signal: controller.signal
         });

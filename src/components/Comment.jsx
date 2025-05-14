@@ -20,13 +20,18 @@ const CommentHeader = styled.div`
   margin-bottom: 0.75rem;
 `;
 
+const AuthorName = styled.span`
+  font-weight: 600;
+  color: #333;
+`;
+
 const Date = styled.span`
   color: #6c757d;
   font-size: 0.875rem;
   transition: color 0.3s ease;
 `;
 
-const Content = styled.p`
+const Content = styled.div`
   margin: 0 0 1rem 0;
   color: #495057;
   line-height: 1.5;
@@ -66,43 +71,50 @@ const StatusBadge = styled.span`
 `;
 
 const Comment = ({ comment, onApprove, onReject, showActionButtons = false }) => {
+  if (!comment) return null;
+  
   const formattedDate = formatDate(comment.created_at);
   const relativeTime = getRelativeTime(comment.created_at);
   
   // Sanitize content
-  const content = sanitize(comment.content);
+  const sanitizedContent = sanitize(comment.content);
+  const authorName = comment.author_name || 'Anonymous';
   
   return (
     <CommentContainer $approved={comment.approved}>
       <CommentHeader>
+        <AuthorName>{authorName}</AuthorName>
         <Date title={formattedDate}>{relativeTime || formattedDate}</Date>
       </CommentHeader>
-      <Content dangerouslySetInnerHTML={{ __html: content }} />
       
-      <BadgeContainer>
-        <StatusBadge $approved={comment.approved}>
-          {comment.approved ? 'Approved' : 'Pending Approval'}
-        </StatusBadge>
-        
-        {showActionButtons && !comment.approved && (
-          <ButtonContainer>
-            <RejectButton 
-              $variant="danger" 
-              onClick={() => onReject(comment.id)}
-              size="small"
-            >
-              Reject
-            </RejectButton>
-            <ApprovalButton 
-              $variant="success" 
-              onClick={() => onApprove(comment.id)}
-              size="small"
-            >
-              Approve
-            </ApprovalButton>
-          </ButtonContainer>
-        )}
-      </BadgeContainer>
+      <Content dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+      
+      {showActionButtons ? (
+        <BadgeContainer>
+          <StatusBadge $approved={comment.approved}>
+            {comment.approved ? 'Approved' : 'Pending Approval'}
+          </StatusBadge>
+          
+          {!comment.approved && (
+            <ButtonContainer>
+              <RejectButton 
+                $variant="danger" 
+                onClick={() => onReject(comment.id)}
+                size="small"
+              >
+                Reject
+              </RejectButton>
+              <ApprovalButton 
+                $variant="success" 
+                onClick={() => onApprove(comment.id)}
+                size="small"
+              >
+                Approve
+              </ApprovalButton>
+            </ButtonContainer>
+          )}
+        </BadgeContainer>
+      ) : null}
     </CommentContainer>
   );
 };

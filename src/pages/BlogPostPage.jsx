@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useBlog } from '../context/BlogContext';
-import { useComments } from '../context/CommentContext';
 import CommentForm from '../components/CommentForm';
 import Comment from '../components/Comment';
 import { formatDate } from '../utils/dateUtils';
@@ -10,7 +9,8 @@ import { sanitizeBlogContent } from '../utils/sanitize';
 import BlogHeader from '../components/BlogHeader';
 import BlogFooter from '../components/BlogFooter';
 import placeholderImage from '../assets/placeholder-image.js';
-import { postAPI, commentAPI, mediaAPI } from '../api/apiService';
+import { postAPI, mediaAPI } from '../api/apiService';
+import usePostComments from '../hooks/usePostComments';
 
 const PageContainer = styled.div`
   font-family: 'Inter', sans-serif;
@@ -115,6 +115,13 @@ const PostContent = styled.div`
     color: #333;
     font-weight: 600;
   }
+
+  h3 {
+    font-size: 1.4rem;
+    margin: 1.8rem 0 0.8rem;
+    color: #333;
+    font-weight: 600;
+  }
   
   p {
     margin-bottom: 1.5rem;
@@ -142,6 +149,96 @@ const PostContent = styled.div`
     margin: 1.5rem 0;
     font-style: italic;
     color: #555;
+  }
+
+  /* CKEditor 5 specific styles */
+  figure {
+    margin: 2rem 0;
+    text-align: center;
+    
+    &.image {
+      img {
+        margin: 0 auto;
+      }
+    }
+    
+    figcaption {
+      font-size: 0.9rem;
+      color: #666;
+      margin-top: 0.5rem;
+    }
+  }
+  
+  figure.table {
+    overflow-x: auto;
+    width: 100%;
+    margin: 2rem 0;
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      
+      th, td {
+        border: 1px solid #e0e0e0;
+        padding: 0.5rem;
+      }
+      
+      th {
+        background-color: #f5f5f5;
+        font-weight: 600;
+      }
+      
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+    }
+    
+    figcaption {
+      font-style: italic;
+      margin-top: 0.5rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #666;
+    }
+  }
+  
+  pre {
+    background-color: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9rem;
+    }
+  }
+  
+  code {
+    background-color: #f5f5f5;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+  }
+  
+  .table-of-contents {
+    background-color: #f9f9f9;
+    padding: 1rem;
+    border-radius: 4px;
+    margin: 2rem 0;
+    
+    ol, ul {
+      margin-bottom: 0;
+    }
+  }
+  
+  iframe {
+    max-width: 100%;
+    margin: 1.5rem 0;
+    border: none;
+    border-radius: 8px;
   }
 `;
 
@@ -360,28 +457,77 @@ const Spinner = styled.div`
 // Global post cache to store loaded posts
 const postCache = new Map();
 
+const CommentsSection = styled.div`
+  margin-top: 3rem;
+  border-top: 1px solid #eaeaea;
+  padding-top: 2rem;
+`;
+
+const CommentsHeader = styled.h2`
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+`;
+
+const CommentsList = styled.div`
+  margin-bottom: 2rem;
+`;
+
+const LoadMoreButton = styled.button`
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin: 1rem auto;
+  display: block;
+  
+  &:hover {
+    background-color: #e5e5e5;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 const BlogPostPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { fetchPost, loading: blogLoading, error: blogError } = useBlog();
-  const { comments: contextComments, fetchComments: contextFetchComments, createComment: contextCreateComment, loadMoreComments: contextLoadMoreComments, loading: commentsLoading } = useComments();
-  const [post, setPost] = useState(() => postCache.get(id) || null);
-  const [relatedPosts, setRelatedPosts] = useState([]);
-  const [pageLoading, setPageLoading] = useState(!post);
-  const [visibleLoading, setVisibleLoading] = useState(!post);
-  const [errorState, setError] = useState(null);
+  const { pathname } = useLocation();
   const contentRef = useRef(null);
   const initialLoad = useRef(true);
-  const commentsLoaded = useRef(false);
-  const [showCommentForm, setShowCommentForm] = useState(false);
-  const [commentSubmitted, setCommentSubmitted] = useState(false);
   const isMounted = useRef(true);
+  
+  // Local state
+  const [post, setPost] = useState(null);
+  const [relatedPosts, setRelatedPosts] = useState([]);
+  const [showCommentForm, setShowCommentForm] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [errorState, setError] = useState(null);
+  
+  // Use the custom comments hook
+  const {
+    comments,
+    loading: commentsLoading,
+    error: commentsError,
+    hasMore: hasMoreComments,
+    commentSubmitted,
+    submittingComment,
+    loadMore: loadMoreComments,
+    submitComment,
+    setCommentSubmitted
+  } = usePostComments(id);
+  
+  // Context
+  const { fetchPost, blogError } = useBlog();
 
   // Scroll to top when navigating to a new post
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
-  }, [id, location.pathname]);
+  }, [id, pathname]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -391,13 +537,10 @@ const BlogPostPage = () => {
       setPost(postCache.get(id));
       if (initialLoad.current) {
         setPageLoading(false);
-        setVisibleLoading(false);
         initialLoad.current = false;
       } else {
         // Still show briefly that we're loading new content
         setPageLoading(true);
-        // But don't show the overlay for cached content
-        setVisibleLoading(false);
         
         // Hide loading after a small delay
         const timer = setTimeout(() => {
@@ -413,22 +556,7 @@ const BlogPostPage = () => {
     } else {
       // Show loading indicators for uncached content
       setPageLoading(true);
-      
-      // Small delay before showing loading overlay to prevent flash
-      const loadingTimer = setTimeout(() => {
-        if (isMounted.current && pageLoading) {
-          setVisibleLoading(true);
-        }
-      }, 200);
-      
-      return () => {
-        clearTimeout(loadingTimer);
-      };
     }
-
-    // Reset comments loaded state when post ID changes
-    commentsLoaded.current = false;
-    
   }, [id]);
 
   useEffect(() => {
@@ -437,9 +565,6 @@ const BlogPostPage = () => {
     const loadPost = async () => {
       try {
         if (!isMounted.current) return;
-        
-        // Start loading
-        setPageLoading(true);
         
         // Fetch the post data
         let postData;
@@ -450,7 +575,6 @@ const BlogPostPage = () => {
           if (isMounted.current) {
             setError('Failed to load post');
             setPageLoading(false);
-            setVisibleLoading(false);
           }
           return;
         }
@@ -476,14 +600,12 @@ const BlogPostPage = () => {
         setTimeout(() => {
           if (isMounted.current) {
             setPageLoading(false);
-            setVisibleLoading(false);
           }
         }, 300);
       } catch (err) {
         console.error('Error loading post:', err);
         if (isMounted.current) {
           setPageLoading(false);
-          setVisibleLoading(false);
         }
       }
     };
@@ -494,15 +616,6 @@ const BlogPostPage = () => {
       isMounted.current = false;
     };
   }, [id]);
-
-  // Separate effect for loading comments to prevent infinite loop
-  useEffect(() => {
-    if (id && post && !commentsLoaded.current) {
-      // Only load comments after post is loaded and only ONCE
-      contextFetchComments(id);
-      commentsLoaded.current = true;
-    }
-  }, [id, post, contextFetchComments]);
 
   // Placeholder for related posts function
   const getRelatedPosts = async (currentPost) => {
@@ -539,17 +652,7 @@ const BlogPostPage = () => {
   const handleCommentSubmit = async (commentData) => {
     try {
       setPageLoading(true);
-      
-      // Add the post ID to the comment data
-      const fullCommentData = {
-        ...commentData,
-        post: id
-      };
-      
-      // Use the new commentAPI service
-      await commentAPI.create(fullCommentData);
-      
-      setCommentSubmitted(true);
+      await submitComment(commentData);
       setShowCommentForm(false);
     } catch (err) {
       console.error('Error submitting comment:', err);
@@ -557,10 +660,6 @@ const BlogPostPage = () => {
     } finally {
       setPageLoading(false);
     }
-  };
-
-  const handleLoadMoreComments = async () => {
-    await contextLoadMoreComments(id);
   };
 
   const shareOnTwitter = () => {
@@ -611,7 +710,7 @@ const BlogPostPage = () => {
         {post.featured_image && (
           <FeaturedImageContainer>
             <FeaturedImage 
-              src={post.featured_image} 
+              src={mediaAPI.getImageUrl(post.featured_image) || post.featured_image} 
               alt={post.title}
               loading="lazy"
               onError={(e) => {
@@ -623,6 +722,7 @@ const BlogPostPage = () => {
         
         <PostContent 
           ref={contentRef}
+          className="ck-content"
           dangerouslySetInnerHTML={{ __html: sanitizeBlogContent(post.content) }} 
         />
         
@@ -655,7 +755,7 @@ const BlogPostPage = () => {
                 <RelatedPostCard key={relatedPost.id}>
                   {relatedPost.featured_image && (
                     <RelatedPostImage 
-                      src={relatedPost.featured_image} 
+                      src={mediaAPI.getImageUrl(relatedPost.featured_image) || relatedPost.featured_image} 
                       alt={relatedPost.title}
                       onError={(e) => {
                         e.target.src = placeholderImage;
@@ -676,34 +776,54 @@ const BlogPostPage = () => {
           </RelatedPostsSection>
         )}
         
-        {/* Comment section */}
-        <CommentForm 
-          postId={id}
-          onCommentSubmitted={handleCommentSubmit} 
-          showCommentForm={showCommentForm}
-          setShowCommentForm={setShowCommentForm}
-        />
-        
-        {contextComments && contextComments.length > 0 ? (
-          <>
-            {contextComments.map(comment => (
-              <Comment key={comment.id} comment={comment} />
-            ))}
-            
-            <button onClick={handleLoadMoreComments} disabled={commentsLoading}>
-              {commentsLoading ? 'Loading more comments...' : 'Load more comments'}
-            </button>
-          </>
-        ) : (
-          <Message>No comments yet. Be the first to comment!</Message>
-        )}
+        {/* Comment section - Updated to use our custom hook */}
+        <CommentsSection>
+          <CommentsHeader>Comments</CommentsHeader>
+          
+          <CommentForm 
+            postId={id}
+            onCommentSubmitted={handleCommentSubmit} 
+            showCommentForm={showCommentForm}
+            setShowCommentForm={setShowCommentForm}
+            isSubmitting={submittingComment}
+          />
+          
+          {commentSubmitted && (
+            <Message>
+              Thank you for your comment! It will be visible after approval.
+            </Message>
+          )}
+          
+          {commentsLoading && comments.length === 0 ? (
+            <Message>Loading comments...</Message>
+          ) : commentsError ? (
+            <Message>{commentsError}</Message>
+          ) : comments.length > 0 ? (
+            <CommentsList>
+              {comments.map(comment => (
+                <Comment key={comment.id} comment={comment} showActionButtons={false} />
+              ))}
+              
+              {hasMoreComments && (
+                <LoadMoreButton 
+                  onClick={loadMoreComments} 
+                  disabled={commentsLoading}
+                >
+                  {commentsLoading ? 'Loading more comments...' : 'Load more comments'}
+                </LoadMoreButton>
+              )}
+            </CommentsList>
+          ) : (
+            <Message>No comments yet. Be the first to comment!</Message>
+          )}
+        </CommentsSection>
       </FadeIn>
     );
   };
 
   return (
     <PageContainer>
-      <LoadingOverlay $isVisible={visibleLoading}>
+      <LoadingOverlay $isVisible={pageLoading}>
         <Spinner />
       </LoadingOverlay>
       <BlogHeader activePage="blog" />
