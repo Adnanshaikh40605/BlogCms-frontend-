@@ -57,13 +57,13 @@ export const CommentProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      // Use the new commentAPI service
-      const data = await commentAPI.getAll(postId);
+      // Use the new getAllForPost API method
+      const data = await commentAPI.getAllForPost(postId);
       console.log('Fetched comments data:', data);
       
-      // Ensure we have valid arrays
-      const approvedComments = Array.isArray(data) ? data.filter(c => c.approved) : [];
-      const pendingCommentsList = Array.isArray(data) ? data.filter(c => !c.approved) : [];
+      // The API returns structured data with approved and pending arrays
+      const approvedComments = Array.isArray(data?.approved) ? data.approved : [];
+      const pendingCommentsList = Array.isArray(data?.pending) ? data.pending : [];
       
       // Set approved comments
       if (append && page > 1) {
@@ -95,7 +95,8 @@ export const CommentProvider = ({ children }) => {
       
       return { 
         approved: approvedComments, 
-        pending: pendingCommentsList
+        pending: pendingCommentsList,
+        total: data?.total || (approvedComments.length + pendingCommentsList.length)
       };
     } catch (err) {
       setError('Failed to fetch comments');

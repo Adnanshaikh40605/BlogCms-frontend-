@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
+import { ckEditorAPI, mediaAPI } from '../api/apiService';
 
 const EditorContainer = styled.div`
   margin-bottom: 1.5rem;
@@ -170,20 +171,45 @@ const RichTextEditor = ({ value, onChange, height = 400 }) => {
   };
   
   // Handle image upload
-  const handleImageUpload = () => {
+  const handleImageUpload = async () => {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
     input.setAttribute('accept', 'image/*');
     
-    input.onchange = () => {
+    input.onchange = async () => {
       const file = input.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const imageUrl = reader.result;
-          execCommand('insertImage', imageUrl);
-        };
-        reader.readAsDataURL(file);
+        try {
+          // Show loading indicator or placeholder
+          const tempId = 'img-loading-' + Date.now();
+          execCommand('insertHTML', `<img id="${tempId}" src="data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='64' height='64'%3E%3Cpath fill='%23ccc' d='M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm4-9h-3V8a1 1 0 0 0-2 0v3H8a1 1 0 0 0 0 2h3v3a1 1 0 0 0 2 0v-3h3a1 1 0 0 0 0-2z'/%3E%3C/svg%3E" alt="Uploading..." />`);
+          
+          // Upload the image using CKEditor API
+          const response = await ckEditorAPI.uploadImage(file);
+          
+          // Once uploaded, replace the placeholder with the actual image
+          if (response && response.url) {
+            const imgUrl = mediaAPI.getImageUrl(response.url);
+            const imgElement = document.getElementById(tempId);
+            if (imgElement) {
+              imgElement.src = imgUrl;
+              imgElement.removeAttribute('id');
+              imgElement.alt = file.name.split('.')[0]; // Use filename as alt
+              
+              // Trigger onChange to save the updated content
+              handleInput();
+            }
+          }
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          alert('Failed to upload image. Please try again.');
+          
+          // Remove the placeholder on error
+          const imgElement = document.getElementById(tempId);
+          if (imgElement) {
+            imgElement.remove();
+          }
+        }
       }
     };
     

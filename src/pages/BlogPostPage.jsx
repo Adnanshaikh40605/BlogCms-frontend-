@@ -710,7 +710,7 @@ const BlogPostPage = () => {
         {post.featured_image && (
           <FeaturedImageContainer>
             <FeaturedImage 
-              src={mediaAPI.getImageUrl(post.featured_image) || post.featured_image} 
+              src={mediaAPI.getImageUrl(post.featured_image)} 
               alt={post.title}
               loading="lazy"
               onError={(e) => {
@@ -755,7 +755,7 @@ const BlogPostPage = () => {
                 <RelatedPostCard key={relatedPost.id}>
                   {relatedPost.featured_image && (
                     <RelatedPostImage 
-                      src={mediaAPI.getImageUrl(relatedPost.featured_image) || relatedPost.featured_image} 
+                      src={mediaAPI.getImageUrl(relatedPost.featured_image)} 
                       alt={relatedPost.title}
                       onError={(e) => {
                         e.target.src = placeholderImage;
