@@ -11,5 +11,7 @@
       "dest": "/",
       "status": 200
     }
-  ]
+  ],
+  "buildCommand": "npm run build",
+  "nodeVersion": "18.x"
 } 
