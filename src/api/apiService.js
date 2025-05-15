@@ -3,7 +3,8 @@
 // Get environment variables with fallback to development values
 // IMPORTANT: When deploying to Vercel, set the VITE_API_URL environment variable to your backend URL
 // For example: https://web-production-f03ff.up.railway.app (if your backend is deployed on Railway)
-const DEFAULT_API_URL = 'https://web-production-f03ff.up.railway.app';
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const DEFAULT_API_URL = isDevelopment ? 'http://localhost:8000' : 'https://web-production-f03ff.up.railway.app';
 const API_URL = (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== 'undefined') 
   ? import.meta.env.VITE_API_URL 
   : DEFAULT_API_URL;
@@ -12,8 +13,12 @@ const MEDIA_URL = (import.meta.env.VITE_MEDIA_URL && import.meta.env.VITE_MEDIA_
   ? import.meta.env.VITE_MEDIA_URL 
   : `${API_URL}/media/`;
 
+// Import mock data for development fallback
+import { mockAPI, handleApiWithFallback } from './apiMocks';
+
 console.log('Using API URL:', API_URL);
 console.log('Using MEDIA URL:', MEDIA_URL);
+console.log('Development mode:', isDevelopment ? 'Yes (will fallback to mock data if API unavailable)' : 'No');
 
 // Add health check to verify API connection
 const checkApiHealth = async () => {
@@ -108,49 +113,96 @@ const handleResponse = async (response) => {
 const postAPI = {
   // Get all posts
   getAll: async (params = {}) => {
-    try {
-      const queryParams = new URLSearchParams(params).toString();
-      const url = queryParams ? `${API_URL}/api/posts/?${queryParams}` : `${API_URL}/api/posts/`;
-      
-      console.log('Fetching posts from URL:', url);
-      
+    if (isDevelopment) {
+      return handleApiWithFallback(
+        async () => {
+          const queryParams = new URLSearchParams(params).toString();
+          const url = queryParams ? `${API_URL}/api/posts/?${queryParams}` : `${API_URL}/api/posts/`;
+          
+          console.log('Fetching posts from URL:', url);
+          
+          try {
+            // First try to ping the API to check if it's responding
+            const healthCheck = await fetch(`${API_URL}/debug-info/`, { method: 'GET' });
+            if (!healthCheck.ok) {
+              console.error('API health check failed:', healthCheck.status, healthCheck.statusText);
+            } else {
+              console.log('API health check successful');
+            }
+          } catch (healthError) {
+            console.error('API health check error:', healthError);
+          }
+          
+          const response = await fetch(url);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`API Error: ${response.status} - ${response.statusText}`, errorText);
+            
+            // Provide more detailed error information for debugging
+            throw new Error(`Server error (${response.status}): ${errorText || response.statusText}`);
+          }
+          
+          return handleResponse(response);
+        },
+        mockAPI.posts.getAll()
+      );
+    } else {
+      // Original implementation for production
       try {
-        // First try to ping the API to check if it's responding
-        const healthCheck = await fetch(`${API_URL}/debug-info/`, { method: 'GET' });
-        if (!healthCheck.ok) {
-          console.error('API health check failed:', healthCheck.status, healthCheck.statusText);
-        } else {
-          console.log('API health check successful');
-        }
-      } catch (healthError) {
-        console.error('API health check error:', healthError);
-      }
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`API Error: ${response.status} - ${response.statusText}`, errorText);
+        const queryParams = new URLSearchParams(params).toString();
+        const url = queryParams ? `${API_URL}/api/posts/?${queryParams}` : `${API_URL}/api/posts/`;
         
-        // Provide more detailed error information for debugging
-        throw new Error(`Server error (${response.status}): ${errorText || response.statusText}`);
+        console.log('Fetching posts from URL:', url);
+        
+        try {
+          // First try to ping the API to check if it's responding
+          const healthCheck = await fetch(`${API_URL}/debug-info/`, { method: 'GET' });
+          if (!healthCheck.ok) {
+            console.error('API health check failed:', healthCheck.status, healthCheck.statusText);
+          } else {
+            console.log('API health check successful');
+          }
+        } catch (healthError) {
+          console.error('API health check error:', healthError);
+        }
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`API Error: ${response.status} - ${response.statusText}`, errorText);
+          
+          // Provide more detailed error information for debugging
+          throw new Error(`Server error (${response.status}): ${errorText || response.statusText}`);
+        }
+        
+        return handleResponse(response);
+      } catch (error) {
+        console.error('API Error fetching posts:', error);
+        throw error;
       }
-      
-      return handleResponse(response);
-    } catch (error) {
-      console.error('API Error fetching posts:', error);
-      throw error;
     }
   },
   
-  // Get single post by ID
+  // Get single post by ID (add development mode fallback)
   getById: async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/api/posts/${id}/`);
-      return handleResponse(response);
-    } catch (error) {
-      console.error(`API Error fetching post ${id}:`, error);
-      throw error;
+    if (isDevelopment) {
+      return handleApiWithFallback(
+        async () => {
+          const response = await fetch(`${API_URL}/api/posts/${id}/`);
+          return handleResponse(response);
+        },
+        mockAPI.posts.getById(id)
+      );
+    } else {
+      try {
+        const response = await fetch(`${API_URL}/api/posts/${id}/`);
+        return handleResponse(response);
+      } catch (error) {
+        console.error(`API Error fetching post ${id}:`, error);
+        throw error;
+      }
     }
   },
   
