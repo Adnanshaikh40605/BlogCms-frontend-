@@ -4,5 +4,5 @@
   ],
   "framework": "vite",
   "installCommand": "npm install --force", 
-  "buildCommand": "npm install --no-optional && npm run build"
+  "buildCommand": "npm run build"
 } 
