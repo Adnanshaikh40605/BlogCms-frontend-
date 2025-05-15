@@ -47,6 +47,15 @@ export const handleApiWithFallback = async (apiCall, mockData) => {
   }
 };
 
+// Helper for mock image uploads
+const createLocalImageUrl = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.readAsDataURL(file);
+  });
+};
+
 export const mockAPI = {
   posts: {
     getAll: () => [...mockPosts],
@@ -55,6 +64,13 @@ export const mockAPI = {
   comments: {
     getAll: () => [...mockComments],
     getForPost: () => []
+  },
+  ckEditor: {
+    uploadImage: async (file) => {
+      console.log('Using mock image upload for development');
+      const dataUrl = await createLocalImageUrl(file);
+      return { url: dataUrl };
+    }
   }
 };
 

@@ -240,9 +240,11 @@ const RichTextEditor = ({ value, onChange, height = 400 }) => {
           } else if (error.message.includes('type not supported')) {
             errorMessage = 'File type not supported. Please use JPG, PNG, GIF or WebP.';
           } else if (error.message.includes('status 404')) {
-            errorMessage = 'Upload endpoint not found. Please check your backend configuration.';
+            errorMessage = 'Upload endpoint not found. The correct path should be /ckeditor5/image_upload/. Please check your backend configuration.';
           } else if (error.message.includes('Editor not initialized')) {
             errorMessage = 'Editor not ready. Please try again.';
+          } else if (error.message && error.message.includes('Method')) {
+            errorMessage = 'Method not allowed. Make sure your backend API supports POST requests for image uploads.';
           }
           alert(errorMessage);
           
