@@ -184,11 +184,23 @@ const RichTextEditor = ({ value, onChange, height = 400 }) => {
           const tempId = 'img-loading-' + Date.now();
           execCommand('insertHTML', `<img id="${tempId}" src="data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='64' height='64'%3E%3Cpath fill='%23ccc' d='M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm4-9h-3V8a1 1 0 0 0-2 0v3H8a1 1 0 0 0 0 2h3v3a1 1 0 0 0 2 0v-3h3a1 1 0 0 0 0-2z'/%3E%3C/svg%3E" alt="Uploading..." />`);
           
+          console.log('Starting image upload for file:', file.name, file.type, file.size);
+          
+          // Make sure file is valid
+          if (file.size > 5 * 1024 * 1024) {
+            throw new Error('File size exceeds 5MB limit');
+          }
+          
+          if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+            throw new Error('File type not supported. Please use JPG, PNG, GIF or WebP');
+          }
+          
           // Upload the image using CKEditor API
           const response = await ckEditorAPI.uploadImage(file);
           
           // Once uploaded, replace the placeholder with the actual image
           if (response && response.url) {
+            console.log('Upload successful, updating image with URL:', response.url);
             const imgUrl = mediaAPI.getImageUrl(response.url);
             const imgElement = document.getElementById(tempId);
             if (imgElement) {
@@ -198,11 +210,26 @@ const RichTextEditor = ({ value, onChange, height = 400 }) => {
               
               // Trigger onChange to save the updated content
               handleInput();
+            } else {
+              console.error('Could not find placeholder image element with ID:', tempId);
             }
+          } else {
+            console.error('Upload response missing URL:', response);
+            throw new Error('Server response missing image URL');
           }
         } catch (error) {
           console.error('Error uploading image:', error);
-          alert('Failed to upload image. Please try again.');
+          
+          // Show more specific error message
+          let errorMessage = 'Failed to upload image. Please try again.';
+          if (error.message.includes('size exceeds')) {
+            errorMessage = 'Image is too large. Maximum size is 5MB.';
+          } else if (error.message.includes('type not supported')) {
+            errorMessage = 'File type not supported. Please use JPG, PNG, GIF or WebP.';
+          } else if (error.message.includes('status 404')) {
+            errorMessage = 'Upload endpoint not found. Please check your backend configuration.';
+          }
+          alert(errorMessage);
           
           // Remove the placeholder on error
           const imgElement = document.getElementById(tempId);

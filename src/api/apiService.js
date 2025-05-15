@@ -539,17 +539,79 @@ const ckEditorAPI = {
   // Upload an image for CKEditor
   uploadImage: async (file) => {
     try {
+      console.log('CKEditor image upload started for file:', file.name);
+      
       const formData = new FormData();
       formData.append('upload', file);
       
-      const response = await fetch(`${API_URL}/ckeditor5/upload/`, {
+      // Try the custom debug endpoint first, which provides more detailed error information
+      const debugUploadUrl = `${API_URL}/api/debug-ckeditor-upload/`;
+      console.log('Using debug upload URL:', debugUploadUrl);
+      
+      try {
+        console.log('Attempting to use debug endpoint first...');
+        const debugResponse = await fetch(debugUploadUrl, {
+          method: 'POST',
+          headers: getHeaders(false), // Don't include Content-Type for file uploads
+          credentials: 'include',
+          body: formData
+        });
+        
+        // Check if the debug endpoint worked
+        if (debugResponse.ok) {
+          console.log('Debug endpoint successful');
+          const result = await debugResponse.json();
+          console.log('Debug upload response:', result);
+          
+          if (result && result.url) {
+            return { url: result.url };
+          }
+        } else {
+          console.warn('Debug endpoint failed, will try regular endpoint');
+          const errorText = await debugResponse.text();
+          console.error('Debug endpoint error:', errorText);
+        }
+      } catch (debugError) {
+        console.warn('Error using debug endpoint:', debugError.message);
+      }
+      
+      // Fall back to the regular CKEditor endpoint
+      const uploadUrl = `${API_URL}/ckeditor5/upload/`;
+      console.log('Falling back to standard upload URL:', uploadUrl);
+      
+      // Clone the FormData since it might have been consumed
+      const freshFormData = new FormData();
+      freshFormData.append('upload', file);
+      
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         headers: getHeaders(false), // Don't include Content-Type for file uploads
         credentials: 'include',
-        body: formData
+        body: freshFormData
       });
       
-      return handleResponse(response);
+      // Check response status first
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`CKEditor image upload failed with status ${response.status}:`, errorText);
+        throw new Error(`Upload failed with status ${response.status}: ${errorText || response.statusText}`);
+      }
+      
+      const result = await handleResponse(response);
+      console.log('CKEditor standard image upload response:', result);
+      
+      // Standardize response structure across environments
+      // CKEditor 5 expects a response with either url or error
+      if (result && (result.url || result.default)) {
+        return {
+          url: result.url || result.default
+        };
+      } else if (result && result.error) {
+        throw new Error(result.error.message || 'Unknown upload error');
+      } else {
+        console.error('Unexpected upload response format:', result);
+        throw new Error('Invalid server response format');
+      }
     } catch (error) {
       console.error('API Error uploading CKEditor image:', error);
       throw error;
