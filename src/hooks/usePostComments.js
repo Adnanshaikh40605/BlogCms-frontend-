@@ -83,10 +83,10 @@ export const usePostComments = (postId, autoFetch = true) => {
       setSubmittingComment(true);
       setError(null);
       
-      // Ensure the post ID is included
+      // Ensure the post ID is included as a string or number, not as an object
       const fullCommentData = {
         ...commentData,
-        post: postId
+        post: String(postId) // Convert to string to ensure it's not an object
       };
       
       console.log('Submitting comment:', fullCommentData);
