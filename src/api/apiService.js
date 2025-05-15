@@ -88,7 +88,7 @@ const handleResponse = async (response) => {
     try {
       // Try to parse as JSON
       const errorData = JSON.parse(errorText);
-      throw new Error(errorData.detail || 'API request failed');
+      throw new Error(JSON.stringify(errorData));
     } catch (e) {
       // If not JSON, use text or status
       throw new Error(errorText || `API request failed with status: ${response.status}`);
@@ -157,18 +157,36 @@ const postAPI = {
   // Create new post
   create: async (postData) => {
     try {
-      // Handle case where postData includes a file for featured_image
-      if (postData.featured_image instanceof File) {
+      // Check if postData includes files (featured_image or additional_images)
+      if (postData.featured_image instanceof File || 
+          (postData.additional_images && postData.additional_images.some(img => img instanceof File))) {
+        
         const formData = new FormData();
         
-        // Add each field to formData
+        // Add regular fields to formData
         Object.keys(postData).forEach(key => {
-          if (key === 'featured_image') {
-            formData.append(key, postData[key]);
-          } else {
+          // Skip files for now
+          if (key !== 'featured_image' && key !== 'additional_images') {
             formData.append(key, postData[key]);
           }
         });
+        
+        // Handle featured image
+        if (postData.featured_image instanceof File) {
+          formData.append('featured_image', postData.featured_image);
+        }
+        
+        // Handle additional images array
+        if (postData.additional_images && Array.isArray(postData.additional_images)) {
+          postData.additional_images.forEach((image, index) => {
+            if (image instanceof File) {
+              formData.append(`additional_images[${index}]`, image);
+            }
+          });
+        }
+        
+        // Log form data for debugging
+        console.log('Sending form data with files');
         
         const response = await fetch(`${API_URL}/api/posts/`, {
           method: 'POST',
@@ -181,6 +199,7 @@ const postAPI = {
       }
       
       // Regular JSON submission without files
+      console.log('Sending JSON data without files');
       const response = await fetch(`${API_URL}/api/posts/`, {
         method: 'POST',
         headers: getHeaders(),
@@ -198,18 +217,33 @@ const postAPI = {
   // Update existing post
   update: async (id, postData) => {
     try {
-      // Handle case where postData includes a file for featured_image
-      if (postData.featured_image instanceof File) {
+      // Check if postData includes files (featured_image or additional_images)
+      if (postData.featured_image instanceof File || 
+          (postData.additional_images && postData.additional_images.some(img => img instanceof File))) {
+        
         const formData = new FormData();
         
-        // Add each field to formData
+        // Add regular fields to formData
         Object.keys(postData).forEach(key => {
-          if (key === 'featured_image') {
-            formData.append(key, postData[key]);
-          } else {
+          // Skip files for now
+          if (key !== 'featured_image' && key !== 'additional_images') {
             formData.append(key, postData[key]);
           }
         });
+        
+        // Handle featured image
+        if (postData.featured_image instanceof File) {
+          formData.append('featured_image', postData.featured_image);
+        }
+        
+        // Handle additional images array
+        if (postData.additional_images && Array.isArray(postData.additional_images)) {
+          postData.additional_images.forEach((image, index) => {
+            if (image instanceof File) {
+              formData.append(`additional_images[${index}]`, image);
+            }
+          });
+        }
         
         const response = await fetch(`${API_URL}/api/posts/${id}/`, {
           method: 'PATCH',
