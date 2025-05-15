@@ -159,11 +159,13 @@ const CommentsPage = () => {
       // If we're viewing pending comments, remove the approved comment from the list
       if (filter === 'pending') {
         setComments(comments.filter(comment => comment.id !== commentId));
+        alert('Comment approved successfully. It will now be visible on the blog post.');
       } else {
         // Otherwise, update the comment's approved status in the list
         setComments(comments.map(comment => 
-          comment.id === commentId ? { ...comment, approved: true } : comment
+          comment.id === commentId ? { ...comment, approved: true, rejected: false } : comment
         ));
+        alert('Comment approved successfully.');
       }
     } catch (err) {
       console.error('Error approving comment:', err);

@@ -451,173 +451,102 @@ const imageAPI = {
 
 // Comment API functions
 const commentAPI = {
-  // Get all comments (with optional filtering)
-  getAll: async (params = {}) => {
-    try {
-      // If specifically requesting approved comments, ensure we exclude rejected ones
-      if (params.approved === true) {
-        params.rejected = false;
-      }
-      
-      const queryParams = new URLSearchParams(params).toString();
-      const url = queryParams ? `${API_URL}/api/comments/?${queryParams}` : `${API_URL}/api/comments/`;
-      const response = await fetch(url);
-      return handleResponse(response);
-    } catch (error) {
-      console.error('API Error fetching comments:', error);
-      throw error;
+  // Get all comments (with optional post ID filter)
+  getAll: async (postId = null) => {
+    let url = `${API_URL}/api/comments/`;
+    if (postId) {
+      url += `?post=${postId}`;
     }
-  },
-  
-  // Get all comments for a post, including either pending, approved, or rejected
-  getAllForPost: async (postId, status = 'all') => {
-    try {
-      if (!postId) throw new Error('Post ID is required');
-      
-      let params = { post: postId };
-      
-      // Filter by status if specified
-      if (status === 'approved') {
-        params.approved = true;
-        params.rejected = false;
-      } else if (status === 'pending') {
-        params.approved = false;
-        params.rejected = false;
-      } else if (status === 'rejected') {
-        params.rejected = true;
-      }
-      
-      const queryParams = new URLSearchParams(params).toString();
-      const url = `${API_URL}/api/comments/?${queryParams}`;
-      const response = await fetch(url);
-      return handleResponse(response);
-    } catch (error) {
-      console.error(`API Error fetching comments for post ${postId}:`, error);
-      throw error;
-    }
+    const response = await fetch(url);
+    return response.json();
   },
   
   // Get approved comments for a post
   getApproved: async (postId) => {
-    return commentAPI.getAllForPost(postId, 'approved');
+    try {
+      console.log(`Fetching approved comments for post ${postId} - ${new Date().toISOString()}`);
+      // Use the dedicated endpoint for approved comments
+      const url = `${API_URL}/api/comments/approved-for-post/?post=${postId}`;
+      console.log('Request URL:', url);
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      console.log('Approved comments response:', data);
+      
+      // Format the response to match what the component expects
+      return {
+        results: Array.isArray(data) ? data : [],
+        count: Array.isArray(data) ? data.length : 0
+      };
+    } catch (error) {
+      console.error('Error fetching approved comments:', error);
+      return { results: [], count: 0 };
+    }
   },
   
   // Get pending comments for a post
   getPending: async (postId) => {
-    return commentAPI.getAllForPost(postId, 'pending');
-  },
-  
-  // Get rejected comments for a post
-  getRejected: async (postId) => {
-    return commentAPI.getAllForPost(postId, 'rejected');
-  },
-  
-  // Get a specific comment
-  getById: async (id) => {
     try {
-      const response = await fetch(`${API_URL}/api/comments/${id}/`);
-      return handleResponse(response);
+      console.log(`Fetching pending comments for post ${postId} - ${new Date().toISOString()}`);
+      // Use explicit query parameter for approved=false
+      const url = `${API_URL}/api/comments/?post=${postId}&approved=false`;
+      console.log('Request URL:', url);
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      console.log('Pending comments response:', data);
+      
+      // Format the response to match what the component expects
+      return {
+        results: Array.isArray(data) ? data : [],
+        count: Array.isArray(data) ? data.length : 0
+      };
     } catch (error) {
-      console.error(`API Error fetching comment ${id}:`, error);
+      console.error('Error fetching pending comments:', error);
+      return { results: [], count: 0 };
+    }
+  },
+  
+  // Debug utility to check approved comments status
+  checkApproved: async (postId) => {
+    try {
+      console.log(`Checking approved comments status for post ${postId}`);
+      const url = `${API_URL}/api/comments/check-approved/?post=${postId}`;
+      console.log('Debug URL:', url);
+      
+      const response = await fetch(url);
+      return response.json();
+    } catch (error) {
+      console.error('Error checking approved comments status:', error);
       throw error;
     }
   },
   
   // Create new comment
   create: async (commentData) => {
-    try {
-      const response = await fetch(`${API_URL}/api/comments/`, {
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(commentData)
-      });
-      
-      return handleResponse(response);
-    } catch (error) {
-      console.error('API Error creating comment:', error);
-      throw error;
-    }
+    const response = await fetch(`${API_URL}/api/comments/`, {
+      method: 'POST',
+      headers: getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(commentData)
+    });
+    return response.json();
   },
   
   // Approve a comment
   approve: async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/api/comments/${id}/approve/`, {
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({})
-      });
-      
-      return handleResponse(response);
-    } catch (error) {
-      console.error(`API Error approving comment ${id}:`, error);
-      throw error;
-    }
-  },
-  
-  // Reject a comment
-  reject: async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/api/comments/${id}/reject/`, {
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({})
-      });
-      
-      return handleResponse(response);
-    } catch (error) {
-      console.error(`API Error rejecting comment ${id}:`, error);
-      throw error;
-    }
-  },
-  
-  // Bulk approve comments
-  bulkApprove: async (commentIds) => {
-    try {
-      const response = await fetch(`${API_URL}/api/comments/bulk_approve/`, {
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({ comment_ids: commentIds })
-      });
-      
-      return handleResponse(response);
-    } catch (error) {
-      console.error('API Error bulk approving comments:', error);
-      throw error;
-    }
-  },
-  
-  // Bulk reject comments
-  bulkReject: async (commentIds) => {
-    try {
-      const response = await fetch(`${API_URL}/api/comments/bulk_reject/`, {
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({ comment_ids: commentIds })
-      });
-      
-      return handleResponse(response);
-    } catch (error) {
-      console.error('API Error bulk rejecting comments:', error);
-      throw error;
-    }
+    const response = await fetch(`${API_URL}/api/comments/${id}/approve/`, {
+      method: 'POST',
+      headers: getHeaders(),
+      credentials: 'include'
+    });
+    return response.json();
   },
   
   // Get pending comment count
   getPendingCount: async () => {
-    try {
-      // Use the correct URL from backend/urls.py (with hyphen, not underscore)
-      const response = await fetch(`${API_URL}/api/comments/pending-count/`);
-      return handleResponse(response);
-    } catch (error) {
-      console.error('API Error fetching pending count:', error);
-      throw error;
-    }
+    const response = await fetch(`${API_URL}/api/comments/pending-count/`);
+    return response.json();
   }
 };
 

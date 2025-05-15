@@ -203,6 +203,32 @@ const CloseButton = styled.button`
   cursor: pointer;
 `;
 
+const RefreshButton = styled.button`
+  background: none;
+  border: none;
+  color: #0066cc;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+  
+  svg {
+    margin-right: 0.25rem;
+  }
+`;
+
+const CommentHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+`;
+
 const PostDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -213,18 +239,47 @@ const PostDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [commentsLoading, setCommentsLoading] = useState(false);
   
   const fetchComments = async () => {
     try {
+      setCommentsLoading(true);
+      console.log(`Fetching comments for post ${id} - ${new Date().toISOString()}`);
+      
       // Fetch approved comments for the post
       const approvedCommentsData = await commentAPI.getApproved(id);
-      setComments(Array.isArray(approvedCommentsData.results) ? approvedCommentsData.results : []);
+      console.log('Approved comments response:', approvedCommentsData);
+      
+      // Ensure we handle both array and object with results property formats
+      if (Array.isArray(approvedCommentsData)) {
+        setComments(approvedCommentsData);
+      } else if (approvedCommentsData && Array.isArray(approvedCommentsData.results)) {
+        setComments(approvedCommentsData.results);
+      } else {
+        console.warn('Unexpected format for approved comments:', approvedCommentsData);
+        setComments([]);
+      }
 
       // Also fetch pending comments for this post - only the user's own pending comments
       const pendingCommentsData = await commentAPI.getPending(id);
-      setPendingComments(Array.isArray(pendingCommentsData.results) ? pendingCommentsData.results : []);
+      console.log('Pending comments response:', pendingCommentsData);
+      
+      // Ensure we handle both array and object with results property formats
+      if (Array.isArray(pendingCommentsData)) {
+        setPendingComments(pendingCommentsData);
+      } else if (pendingCommentsData && Array.isArray(pendingCommentsData.results)) {
+        setPendingComments(pendingCommentsData.results);
+      } else {
+        console.warn('Unexpected format for pending comments:', pendingCommentsData);
+        setPendingComments([]);
+      }
     } catch (err) {
       console.error('Error fetching comments:', err);
+      // Set empty arrays on error to avoid UI issues
+      setComments([]);
+      setPendingComments([]);
+    } finally {
+      setCommentsLoading(false);
     }
   };
   
@@ -237,6 +292,20 @@ const PostDetailPage = () => {
         
         // Fetch comments
         await fetchComments();
+        
+        // Debug - check approved comments status
+        try {
+          const approvedCheck = await commentAPI.checkApproved(id);
+          console.log('Debug - Approved comments check:', approvedCheck);
+          
+          if (approvedCheck.counts.approved > 0 && comments.length === 0) {
+            console.warn('Warning: There are approved comments in the database, but none were loaded in the UI');
+            // Try to re-fetch comments after a short delay
+            setTimeout(fetchComments, 1000);
+          }
+        } catch (debugErr) {
+          console.error('Debug check error:', debugErr);
+        }
         
         setError(null);
       } catch (err) {
@@ -295,6 +364,26 @@ const PostDetailPage = () => {
   
   const closeImageModal = () => {
     setSelectedImage(null);
+  };
+  
+  // Handle refresh button click with feedback
+  const handleRefreshComments = async () => {
+    try {
+      // First check if there are any approved comments in the database
+      const approvedCheck = await commentAPI.checkApproved(id);
+      console.log('Debug - Approved comments check before refresh:', approvedCheck);
+      
+      // Fetch the comments
+      await fetchComments();
+      
+      // Show a message if there are approved comments in the database but none showing in the UI
+      if (approvedCheck.counts.approved > 0 && comments.length === 0) {
+        console.warn('Warning after refresh: There are approved comments in the database, but none were loaded in the UI');
+        alert(`There are ${approvedCheck.counts.approved} approved comments in the database that couldn't be loaded. Please try again or contact support if the issue persists.`);
+      }
+    } catch (err) {
+      console.error('Error refreshing comments:', err);
+    }
   };
   
   if (loading) {
@@ -371,10 +460,27 @@ const PostDetailPage = () => {
       )}
       
       <CommentsSection>
-        <CommentsTitle>Comments</CommentsTitle>
+        <CommentHeader>
+          <CommentsTitle>Comments</CommentsTitle>
+          <RefreshButton onClick={handleRefreshComments} disabled={commentsLoading}>
+            {commentsLoading ? 'Loading...' : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M1 20v-6h6"></path>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                  <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                Refresh Comments
+              </>
+            )}
+          </RefreshButton>
+        </CommentHeader>
         
         <CommentsList>
-          {comments.length === 0 && pendingComments.length === 0 ? (
+          {commentsLoading ? (
+            <Message>Loading comments...</Message>
+          ) : comments.length === 0 && pendingComments.length === 0 ? (
             <Message>No comments yet. Be the first to comment!</Message>
           ) : (
             <>
