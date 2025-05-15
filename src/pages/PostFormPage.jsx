@@ -314,12 +314,18 @@ const PostFormPage = () => {
       setLoading(true);
       const data = await postAPI.getById(id);
       
+      // Keep track of the original image paths for submission
+      let originalFeaturedImage = null;
+      if (data.featured_image) {
+        originalFeaturedImage = data.featured_image;
+      }
+      
       setFormData({
         title: data.title || '',
         content: data.content || '',
         slug: data.slug || '',
         published: Boolean(data.published),
-        featured_image: null,
+        featured_image: null, // We'll keep the image in preview state
         additional_images: []
       });
       
@@ -382,6 +388,11 @@ const PostFormPage = () => {
         featured_image: file,
       });
       
+      setPreview({
+        ...preview,
+        featured_image: file
+      });
+      
       if (errors.featured_image) {
         setErrors({
           ...errors,
@@ -395,6 +406,11 @@ const PostFormPage = () => {
     setFormData({
       ...formData,
       featured_image: null,
+    });
+    
+    setPreview({
+      ...preview,
+      featured_image: null
     });
   };
   
@@ -433,6 +449,9 @@ const PostFormPage = () => {
     if (!formData.content.trim()) {
       newErrors.content = 'Content is required';
     }
+    if (!formData.featured_image && !preview.featured_image) {
+      newErrors.featured_image = 'Featured image is required';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -447,11 +466,28 @@ const PostFormPage = () => {
     try {
       setLoading(true);
       
+      // Create a copy of formData that includes the featured_image from preview if needed
+      const submissionData = { ...formData };
+      
+      // If formData doesn't have featured_image but preview does, use a placeholder value
+      // This is for edit mode when keeping the existing image
+      if (!submissionData.featured_image && preview.featured_image) {
+        // Send the URL/path string in edit mode
+        if (typeof preview.featured_image === 'string') {
+          // Extract just the filename from the URL path
+          const urlParts = preview.featured_image.split('/');
+          const filename = urlParts[urlParts.length - 1];
+          submissionData.featured_image = filename;
+        } else {
+          submissionData.featured_image = preview.featured_image;
+        }
+      }
+      
       if (isEditMode) {
-        await postAPI.update(id, formData);
+        await postAPI.update(id, submissionData);
         navigate(`/posts`);
       } else {
-        const newPost = await postAPI.create(formData);
+        const newPost = await postAPI.create(submissionData);
         navigate(`/posts`);
       }
     } catch (error) {
@@ -522,6 +558,7 @@ const PostFormPage = () => {
             onChange={handleFeaturedImageChange}
             accept="image/*"
           />
+          {errors.featured_image && <ErrorMessage>{errors.featured_image}</ErrorMessage>}
           
           {preview.featured_image && (
             <ImagePreviewContainer>
