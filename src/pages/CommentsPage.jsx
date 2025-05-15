@@ -88,31 +88,59 @@ const CommentsPage = () => {
         if (filter === 'pending') {
           // Fetch pending comments (not approved and not rejected)
           console.log('CommentsPage - Fetching pending comments');
-          responseData = await commentAPI.getAll({ approved: false, rejected: false });
-          console.log('CommentsPage - Pending comments response:', responseData);
+          try {
+            // Direct fetch instead of passing objects
+            const response = await fetch(`${API_URL}/api/comments/?approved=false`);
+            if (!response.ok) {
+              throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+            responseData = await response.json();
+            console.log('CommentsPage - Pending comments response:', responseData);
+          } catch (error) {
+            console.error('Error fetching pending comments:', error);
+            setError(`Failed to load pending comments: ${error.message}`);
+            responseData = [];
+          }
           
         } else if (filter === 'approved') {
           // Get approved comments across all posts
           console.log('CommentsPage - Fetching approved comments');
-          responseData = await commentAPI.getAll({ approved: true, rejected: false });
-          console.log('CommentsPage - Approved comments response:', responseData);
+          try {
+            // Direct fetch instead of passing objects
+            const response = await fetch(`${API_URL}/api/comments/?approved=true`);
+            if (!response.ok) {
+              throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+            responseData = await response.json();
+            console.log('CommentsPage - Approved comments response:', responseData);
+          } catch (error) {
+            console.error('Error fetching approved comments:', error);
+            setError(`Failed to load approved comments: ${error.message}`);
+            responseData = [];
+          }
           
         } else if (filter === 'rejected') {
           // Get rejected comments
           console.log('CommentsPage - Fetching rejected comments');
-          responseData = await commentAPI.getAll({ rejected: true });
-          console.log('CommentsPage - Rejected comments response:', responseData);
+          console.log('CommentsPage - Rejected filter not fully implemented');
+          responseData = [];
+          setError('Rejection feature is not fully implemented yet.');
           
         } else {
           // For 'all' filter case
           try {
             console.log('CommentsPage - Fetching all comments');
-            // Get all comments (no filter)
-            responseData = await commentAPI.getAll();
+            // Direct fetch instead of passing objects
+            const response = await fetch(`${API_URL}/api/comments/`);
+            if (!response.ok) {
+              throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+            responseData = await response.json();
             console.log('CommentsPage - All comments response:', responseData);
           } catch (error) {
-            console.warn('Error fetching comments:', error);
-            setError('Failed to load all comments. Please try a different filter.');
+            console.warn('Error fetching all comments:', error);
+            setError(`Failed to load all comments: ${error.message}`);
+            responseData = [];
           }
         }
         
