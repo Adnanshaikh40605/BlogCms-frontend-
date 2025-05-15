@@ -29,12 +29,9 @@ export const usePostComments = (postId, autoFetch = true) => {
       
       console.log(`Fetching approved comments for post ${postId} (page ${pageNumber})`);
       
-      const response = await commentAPI.getAll({ 
-        post: postId, 
-        approved: true,
-        page: pageNumber,
-        page_size: 10
-      });
+      // Only fetch approved comments for public display using the getApproved helper
+      // This ensures that rejected comments are not included
+      const response = await commentAPI.getApproved(postId);
       
       console.log('Approved comments API response:', response);
       

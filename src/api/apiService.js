@@ -454,6 +454,11 @@ const commentAPI = {
   // Get all comments (with optional filtering)
   getAll: async (params = {}) => {
     try {
+      // If specifically requesting approved comments, ensure we exclude rejected ones
+      if (params.approved === true) {
+        params.rejected = false;
+      }
+      
       const queryParams = new URLSearchParams(params).toString();
       const url = queryParams ? `${API_URL}/api/comments/?${queryParams}` : `${API_URL}/api/comments/`;
       const response = await fetch(url);
@@ -464,17 +469,47 @@ const commentAPI = {
     }
   },
   
-  // Get all comments for a post (approved and pending)
-  getAllForPost: async (postId) => {
+  // Get all comments for a post, including either pending, approved, or rejected
+  getAllForPost: async (postId, status = 'all') => {
     try {
       if (!postId) throw new Error('Post ID is required');
       
-      const response = await fetch(`${API_URL}/api/comments/all/?post=${postId}`);
+      let params = { post: postId };
+      
+      // Filter by status if specified
+      if (status === 'approved') {
+        params.approved = true;
+        params.rejected = false;
+      } else if (status === 'pending') {
+        params.approved = false;
+        params.rejected = false;
+      } else if (status === 'rejected') {
+        params.rejected = true;
+      }
+      
+      const queryParams = new URLSearchParams(params).toString();
+      const url = `${API_URL}/api/comments/?${queryParams}`;
+      const response = await fetch(url);
       return handleResponse(response);
     } catch (error) {
       console.error(`API Error fetching comments for post ${postId}:`, error);
       throw error;
     }
+  },
+  
+  // Get approved comments for a post
+  getApproved: async (postId) => {
+    return commentAPI.getAllForPost(postId, 'approved');
+  },
+  
+  // Get pending comments for a post
+  getPending: async (postId) => {
+    return commentAPI.getAllForPost(postId, 'pending');
+  },
+  
+  // Get rejected comments for a post
+  getRejected: async (postId) => {
+    return commentAPI.getAllForPost(postId, 'rejected');
   },
   
   // Get a specific comment

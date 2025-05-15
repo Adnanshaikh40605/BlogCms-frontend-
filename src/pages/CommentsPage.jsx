@@ -71,7 +71,7 @@ const CommentsPage = () => {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('pending'); // 'pending', 'approved', 'all'
+  const [filter, setFilter] = useState('pending'); // 'pending', 'approved', 'rejected', 'all'
   const [debug, setDebug] = useState({});
   
   useEffect(() => {
@@ -86,16 +86,22 @@ const CommentsPage = () => {
         let responseData = {};
         
         if (filter === 'pending') {
-          // Fetch pending comments
+          // Fetch pending comments (not approved and not rejected)
           console.log('CommentsPage - Fetching pending comments');
-          responseData = await commentAPI.getAll({ approved: false });
+          responseData = await commentAPI.getAll({ approved: false, rejected: false });
           console.log('CommentsPage - Pending comments response:', responseData);
           
         } else if (filter === 'approved') {
           // Get approved comments across all posts
           console.log('CommentsPage - Fetching approved comments');
-          responseData = await commentAPI.getAll({ approved: true });
+          responseData = await commentAPI.getAll({ approved: true, rejected: false });
           console.log('CommentsPage - Approved comments response:', responseData);
+          
+        } else if (filter === 'rejected') {
+          // Get rejected comments
+          console.log('CommentsPage - Fetching rejected comments');
+          responseData = await commentAPI.getAll({ rejected: true });
+          console.log('CommentsPage - Rejected comments response:', responseData);
           
         } else {
           // For 'all' filter case
@@ -169,8 +175,23 @@ const CommentsPage = () => {
     try {
       await commentAPI.reject(commentId);
       
-      // Remove the rejected comment from the list
-      setComments(comments.filter(comment => comment.id !== commentId));
+      // If we're viewing pending comments, remove the rejected comment from the list
+      if (filter === 'pending') {
+        setComments(comments.filter(comment => comment.id !== commentId));
+      } else if (filter === 'rejected') {
+        // If viewing rejected comments, update the status
+        setComments(comments.map(comment => 
+          comment.id === commentId ? { ...comment, rejected: true, approved: false } : comment
+        ));
+      } else if (filter === 'all') {
+        // If viewing all comments, update the status
+        setComments(comments.map(comment => 
+          comment.id === commentId ? { ...comment, rejected: true, approved: false } : comment
+        ));
+      } else {
+        // Remove from approved list if that's what we're viewing
+        setComments(comments.filter(comment => comment.id !== commentId));
+      }
     } catch (err) {
       console.error('Error rejecting comment:', err);
       alert('Failed to reject comment. Please try again.');
@@ -200,6 +221,12 @@ const CommentsPage = () => {
             Approved
           </FilterButton>
           <FilterButton 
+            $active={filter === 'rejected'}
+            onClick={() => setFilter('rejected')}
+          >
+            Rejected
+          </FilterButton>
+          <FilterButton 
             $active={filter === 'all'}
             onClick={() => setFilter('all')}
           >
@@ -225,6 +252,7 @@ const CommentsPage = () => {
         <Message>
           {filter === 'pending' ? 'No pending comments found.' : 
            filter === 'approved' ? 'No approved comments found.' : 
+           filter === 'rejected' ? 'No rejected comments found.' : 
            'No comments found.'}
         </Message>
       ) : (
@@ -235,7 +263,7 @@ const CommentsPage = () => {
               comment={comment}
               onApprove={handleApproveComment}
               onReject={handleRejectComment}
-              showActionButtons={filter !== 'approved'}
+              showActionButtons={filter !== 'approved' && filter !== 'rejected'}
             />
           ))}
         </CommentsList>

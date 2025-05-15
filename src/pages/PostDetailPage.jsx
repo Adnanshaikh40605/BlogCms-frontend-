@@ -217,11 +217,11 @@ const PostDetailPage = () => {
   const fetchComments = async () => {
     try {
       // Fetch approved comments for the post
-      const approvedCommentsData = await commentAPI.getAll({ post: id, approved: true });
+      const approvedCommentsData = await commentAPI.getApproved(id);
       setComments(Array.isArray(approvedCommentsData.results) ? approvedCommentsData.results : []);
 
-      // Also fetch pending comments for this post
-      const pendingCommentsData = await commentAPI.getAll({ post: id, approved: false });
+      // Also fetch pending comments for this post - only the user's own pending comments
+      const pendingCommentsData = await commentAPI.getPending(id);
       setPendingComments(Array.isArray(pendingCommentsData.results) ? pendingCommentsData.results : []);
     } catch (err) {
       console.error('Error fetching comments:', err);
