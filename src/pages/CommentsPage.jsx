@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Comment from '../components/Comment';
-import { commentAPI } from '../api/apiService';
+import { commentAPI, API_URL } from '../api/apiService';
 
 const Container = styled.div`
   width: 100%;
