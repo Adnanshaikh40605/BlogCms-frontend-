@@ -56,11 +56,23 @@ const Message = styled.p`
   padding: 2rem;
 `;
 
+const DebugInfo = styled.div`
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+  font-family: monospace;
+  font-size: 0.8rem;
+  overflow-x: auto;
+`;
+
 const CommentsPage = () => {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('pending'); // 'pending', 'approved', 'all'
+  const [debug, setDebug] = useState({});
   
   useEffect(() => {
     const fetchComments = async () => {
@@ -71,30 +83,46 @@ const CommentsPage = () => {
         console.log('CommentsPage - Fetching comments with filter:', filter);
         
         let commentsData = [];
+        let responseData = {};
+        
         if (filter === 'pending') {
           // Fetch pending comments
           console.log('CommentsPage - Fetching pending comments');
-          const pendingData = await commentAPI.getAll({ approved: false, page: 1, page_size: 10 });
-          console.log('CommentsPage - Pending comments response:', pendingData);
-          commentsData = Array.isArray(pendingData.results) ? pendingData.results : [];
+          responseData = await commentAPI.getAll({ approved: false });
+          console.log('CommentsPage - Pending comments response:', responseData);
+          
         } else if (filter === 'approved') {
           // Get approved comments across all posts
           console.log('CommentsPage - Fetching approved comments');
-          const approvedData = await commentAPI.getAll({ approved: true, page: 1, page_size: 10 });
-          console.log('CommentsPage - Approved comments response:', approvedData);
-          commentsData = Array.isArray(approvedData.results) ? approvedData.results : [];
+          responseData = await commentAPI.getAll({ approved: true });
+          console.log('CommentsPage - Approved comments response:', responseData);
+          
         } else {
           // For 'all' filter case
           try {
             console.log('CommentsPage - Fetching all comments');
             // Get all comments (no filter)
-            const response = await commentAPI.getAll();
-            console.log('CommentsPage - All comments response:', response);
-            commentsData = Array.isArray(response.results) ? response.results : [];
+            responseData = await commentAPI.getAll();
+            console.log('CommentsPage - All comments response:', responseData);
           } catch (error) {
             console.warn('Error fetching comments:', error);
             setError('Failed to load all comments. Please try a different filter.');
           }
+        }
+        
+        // Store debug info
+        setDebug(responseData);
+        
+        // Handle both paginated and non-paginated responses
+        if (responseData && responseData.results) {
+          // Paginated response
+          commentsData = responseData.results;
+        } else if (Array.isArray(responseData)) {
+          // Non-paginated array response
+          commentsData = responseData;
+        } else {
+          console.warn('Unexpected response format:', responseData);
+          commentsData = [];
         }
         
         console.log('CommentsPage - Final comments data:', commentsData);
@@ -149,6 +177,10 @@ const CommentsPage = () => {
     }
   };
   
+  // For development: show debug button
+  const isDevelopment = import.meta.env.DEV;
+  const [showDebug, setShowDebug] = useState(false);
+  
   return (
     <Container>
       <Header>
@@ -173,6 +205,15 @@ const CommentsPage = () => {
           >
             All
           </FilterButton>
+          
+          {isDevelopment && (
+            <FilterButton
+              onClick={() => setShowDebug(!showDebug)}
+              style={{ backgroundColor: showDebug ? '#ff9900' : 'transparent', color: showDebug ? 'white' : '#ff9900' }}
+            >
+              Debug
+            </FilterButton>
+          )}
         </FilterContainer>
       </Header>
       
@@ -198,6 +239,13 @@ const CommentsPage = () => {
             />
           ))}
         </CommentsList>
+      )}
+      
+      {showDebug && (
+        <DebugInfo>
+          <h4>Debug Info:</h4>
+          <pre>{JSON.stringify(debug, null, 2)}</pre>
+        </DebugInfo>
       )}
     </Container>
   );

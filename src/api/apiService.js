@@ -524,7 +524,8 @@ const commentAPI = {
   // Get pending comment count
   getPendingCount: async () => {
     try {
-      const response = await fetch(`${API_URL}/api/comments/pending_count/`);
+      // Use the correct URL from backend/urls.py (with hyphen, not underscore)
+      const response = await fetch(`${API_URL}/api/comments/pending-count/`);
       return handleResponse(response);
     } catch (error) {
       console.error('API Error fetching pending count:', error);
