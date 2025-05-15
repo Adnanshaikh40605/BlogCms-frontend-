@@ -1,5 +1,8 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  ],
+  "framework": "vite",
+  "installCommand": "npm install --force", 
+  "buildCommand": "npm install --no-optional && npm run build"
 } 
