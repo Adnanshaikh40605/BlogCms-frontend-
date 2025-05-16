@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { postAPI } from '../api/apiService';
+import { postAPI, mediaAPI } from '../api/apiService';
+import SEO from '../components/SEO';
+import SocialShare from '../components/SocialShare';
+import LazyImage from '../components/LazyImage';
 
 const BlogContainer = styled.div`
   max-width: 800px;
@@ -124,6 +127,26 @@ const BlogPage = () => {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Get the current URL for sharing
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+
+  // Extract a plain text excerpt from the post content for meta description and sharing
+  const getPlainTextExcerpt = (content, maxLength = 160) => {
+    if (!content) return '';
+    // Remove HTML tags
+    const plainText = content.replace(/<[^>]+>/g, ' ');
+    // Truncate to max length
+    if (plainText.length <= maxLength) return plainText;
+    // Find the last space before maxLength
+    const excerpt = plainText.substring(0, maxLength);
+    const lastSpaceIndex = excerpt.lastIndexOf(' ');
+    
+    if (lastSpaceIndex > 0) {
+      return excerpt.substring(0, lastSpaceIndex) + '...';
+    }
+    return excerpt + '...';
+  };
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -166,9 +189,23 @@ const BlogPage = () => {
       </BlogContainer>
     );
   }
-
+  
+  const plainTextExcerpt = getPlainTextExcerpt(post.content);
+  const imageUrl = post.featured_image ? mediaAPI.getImageUrl(post.featured_image) : null;
+  
   return (
     <BlogContainer>
+      {/* SEO Meta Tags */}
+      <SEO 
+        title={post.title}
+        description={plainTextExcerpt}
+        image={post.featured_image}
+        url={currentUrl}
+        published={post.created_at}
+        modified={post.updated_at}
+        type="article"
+      />
+      
       <BackLink to="/blog">← Back to Blog</BackLink>
       
       <BlogHeader>
@@ -183,15 +220,23 @@ const BlogPage = () => {
         <BlogTitle>{post.title}</BlogTitle>
       </BlogHeader>
 
-      {post.featured_image && (
-        <img 
-          src={post.featured_image} 
+      {imageUrl && (
+        <LazyImage
+          src={imageUrl}
           alt={post.title}
-          style={{ width: '100%', height: 'auto', borderRadius: '8px', marginBottom: '2rem' }}
+          aspectRatio="16/9"
+          borderRadius="8px"
         />
       )}
 
       <BlogContent dangerouslySetInnerHTML={{ __html: post.content }} />
+      
+      {/* Social Sharing Component */}
+      <SocialShare 
+        url={currentUrl}
+        title={post.title}
+        summary={plainTextExcerpt}
+      />
     </BlogContainer>
   );
 };

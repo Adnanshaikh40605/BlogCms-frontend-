@@ -4,6 +4,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { postAPI, mediaAPI } from '../api/apiService';
 import BlogHeader from '../components/BlogHeader';
 import BlogFooter from '../components/BlogFooter';
+import SEO from '../components/SEO';
+import LazyImage from '../components/LazyImage';
 import placeholderImage from '../assets/placeholder-image.js';
 
 const PageContainer = styled.div`
@@ -263,8 +265,24 @@ const BlogListPage = () => {
   const [visibleLoading, setVisibleLoading] = useState(!postsCache);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [postsPerPage] = useState(9);
   const initialLoad = useRef(!postsCache);
   const isMounted = useRef(true);
+  const mainContentRef = useRef(null);
+  
+  // Check if this is a category page
+  const isCategoryPage = location.pathname.startsWith('/blog/category/');
+  const category = isCategoryPage ? decodeURIComponent(location.pathname.split('/blog/category/')[1]) : null;
+  
+  // Generate appropriate page title and description
+  const pageTitle = category 
+    ? `${category} Articles - Blog CMS`
+    : 'Blog - Latest Articles and Insights';
+  const pageDescription = category 
+    ? `Read our latest articles about ${category.toLowerCase()} and stay updated with the newest trends and insights.`
+    : 'Explore our blog for the latest articles, insights, and updates from our team.';
 
   // Scroll to top on navigation
   useLayoutEffect(() => {
@@ -378,21 +396,22 @@ const BlogListPage = () => {
     return (
       <FadeIn>
         <Header>
-          <BlogTitle>Driveronhire Car Care & Driving Blog</BlogTitle>
+          <BlogTitle>{category ? `${category} Articles` : 'Our Blog'}</BlogTitle>
           <BlogSubtitle>
-            Your go-to resource for premium, police-verified drivers on
-            demand, available 24/7 or by the hour.
+            {category
+              ? `Explore our latest articles about ${category.toLowerCase()}`
+              : 'Insights, news, and expert perspectives from our team to help you stay informed.'}
           </BlogSubtitle>
         </Header>
         
         <SearchContainer>
           <SearchInput 
-            type="text" 
-            placeholder="Search anything about drivers"
+            type="text"
+            placeholder="Search articles..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <SearchIcon>🔍</SearchIcon>
+          <SearchIcon aria-hidden="true">🔍</SearchIcon>
         </SearchContainer>
 
         <BlogGrid>
@@ -432,24 +451,71 @@ const BlogListPage = () => {
             </BlogPost>
           ))}
         </BlogGrid>
-        
-        <Pagination>
-          <PageButton $active={true}>1</PageButton>
-          <PageButton>2</PageButton>
-          <PageButton>3</PageButton>
-        </Pagination>
       </FadeIn>
     );
   };
 
   return (
     <PageContainer>
+      {/* SEO Meta Tags */}
+      <SEO 
+        title={pageTitle}
+        description={pageDescription}
+        url={typeof window !== 'undefined' ? window.location.href : ''}
+        type="website"
+      />
+      
       <LoadingOverlay $isVisible={visibleLoading}>
         <Spinner />
       </LoadingOverlay>
-      <BlogHeader activePage="blog" />
-      <MainContent>
+      <BlogHeader activeTab="blog" />
+      <MainContent ref={mainContentRef}>
+        <Header>
+          <BlogTitle>{category ? `${category} Articles` : 'Our Blog'}</BlogTitle>
+          <BlogSubtitle>
+            {category
+              ? `Explore our latest articles about ${category.toLowerCase()}`
+              : 'Insights, news, and expert perspectives from our team to help you stay informed.'}
+          </BlogSubtitle>
+          
+          <SearchContainer>
+            <SearchInput 
+              type="text"
+              placeholder="Search articles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <SearchIcon aria-hidden="true">🔍</SearchIcon>
+          </SearchContainer>
+        </Header>
+        
         {renderContent()}
+        
+        <Pagination>
+          <PageButton 
+            onClick={() => handlePageChange(currentPage - 1)} 
+            disabled={currentPage === 1}
+          >
+            Previous
+          </PageButton>
+          
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <PageButton 
+              key={page} 
+              $active={page === currentPage}
+              onClick={() => handlePageChange(page)}
+            >
+              {page}
+            </PageButton>
+          ))}
+          
+          <PageButton 
+            onClick={() => handlePageChange(currentPage + 1)} 
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </PageButton>
+        </Pagination>
       </MainContent>
       <BlogFooter />
     </PageContainer>

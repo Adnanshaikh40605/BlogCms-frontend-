@@ -20,6 +20,50 @@ console.log('Using API URL:', API_URL);
 console.log('Using MEDIA URL:', MEDIA_URL);
 console.log('Development mode:', isDevelopment ? 'Yes (will fallback to mock data if API unavailable)' : 'No');
 
+// Media API helper for working with images
+export const mediaAPI = {
+  getImageUrl: (path) => {
+    if (!path) return null;
+    
+    // If the path is already a full URL, return it
+    if (path.startsWith('http')) {
+      return path;
+    }
+    
+    // If path starts with /media, don't add media URL again
+    if (path.startsWith('/media/')) {
+      return path.startsWith('/media') && !MEDIA_URL.endsWith('/media') 
+        ? `${MEDIA_URL}${path.substring(6)}` // Remove /media from path
+        : path;
+    }
+    
+    // Otherwise, add the media URL
+    return `${MEDIA_URL}${path.replace(/^\//, '')}`;
+  },
+  
+  // Get optimized image URL with size parameters (when supported by backend)
+  getOptimizedImageUrl: (path, { width, height, format } = {}) => {
+    if (!path) return null;
+    
+    const baseUrl = mediaAPI.getImageUrl(path);
+    if (!baseUrl) return null;
+    
+    // If no optimization parameters, return base URL
+    if (!width && !height && !format) {
+      return baseUrl;
+    }
+    
+    // Build query parameters for optimized image
+    const params = new URLSearchParams();
+    if (width) params.append('w', width);
+    if (height) params.append('h', height);
+    if (format) params.append('fmt', format);
+    
+    // Add parameters to URL
+    return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params.toString()}`;
+  }
+};
+
 // Add health check to verify API connection
 const checkApiHealth = async () => {
   try {
@@ -669,6 +713,80 @@ const commentAPI = {
     }
   },
   
+  // Reply to a comment as admin
+  replyToComment: async (commentId, replyData) => {
+    try {
+      if (!commentId) {
+        console.error('No comment ID provided for reply');
+        throw new Error('Comment ID is required');
+      }
+      
+      const safeCommentId = String(commentId);
+      const url = `${API_URL}/api/comments/${safeCommentId}/reply/`;
+      console.log('Replying to comment with URL:', url, replyData);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(replyData)
+      });
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error replying to comment:', error);
+      throw error;
+    }
+  },
+  
+  // Update an existing admin reply
+  updateReply: async (commentId, replyData) => {
+    try {
+      if (!commentId) {
+        console.error('No comment ID provided for update reply');
+        throw new Error('Comment ID is required');
+      }
+      
+      const safeCommentId = String(commentId);
+      const url = `${API_URL}/api/comments/${safeCommentId}/reply/`;
+      console.log('Updating comment reply with URL:', url, replyData);
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(replyData)
+      });
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating comment reply:', error);
+      throw error;
+    }
+  },
+  
+  // Delete an admin reply
+  deleteReply: async (commentId) => {
+    try {
+      if (!commentId) {
+        console.error('No comment ID provided for delete reply');
+        throw new Error('Comment ID is required');
+      }
+      
+      const safeCommentId = String(commentId);
+      const url = `${API_URL}/api/comments/${safeCommentId}/reply/`;
+      console.log('Deleting comment reply with URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting comment reply:', error);
+      throw error;
+    }
+  },
+  
   // Get pending comment count
   getPendingCount: async () => {
     try {
@@ -960,11 +1078,6 @@ const debugAPI = {
       throw error;
     }
   }
-};
-
-// Media URL helper functions
-const mediaAPI = {
-  getImageUrl: imageAPI.getImageUrl
 };
 
 export { 

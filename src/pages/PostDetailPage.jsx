@@ -4,6 +4,8 @@ import styled from 'styled-components';
 import Button from '../components/Button';
 import Comment from '../components/Comment';
 import CommentForm from '../components/CommentForm';
+import SEO from '../components/SEO';
+import SocialShare from '../components/SocialShare';
 import { postAPI, commentAPI } from '../api/apiService';
 import { formatDate } from '../utils/dateUtils';
 import placeholderImage from '../assets/placeholder-image.js';
@@ -240,6 +242,28 @@ const PostDetailPage = () => {
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const [modalImage, setModalImage] = useState(null);
+  
+  // Get the current URL for sharing
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+
+  // Extract a plain text excerpt from the post content for meta description and sharing
+  const getPlainTextExcerpt = (content, maxLength = 160) => {
+    if (!content) return '';
+    // Remove HTML tags
+    const plainText = content.replace(/<[^>]+>/g, ' ');
+    // Truncate to max length
+    if (plainText.length <= maxLength) return plainText;
+    // Find the last space before maxLength
+    const excerpt = plainText.substring(0, maxLength);
+    const lastSpaceIndex = excerpt.lastIndexOf(' ');
+    
+    if (lastSpaceIndex > 0) {
+      return excerpt.substring(0, lastSpaceIndex) + '...';
+    }
+    return excerpt + '...';
+  };
   
   const fetchComments = async () => {
     try {
@@ -395,35 +419,39 @@ const PostDetailPage = () => {
   }
   
   const formattedDate = formatDate(post.created_at);
+  const plainTextExcerpt = getPlainTextExcerpt(post.content);
   
   return (
     <Container>
-      <BackLink to="/posts">← Back to Posts</BackLink>
+      {/* SEO Meta Tags */}
+      <SEO 
+        title={post.title}
+        description={plainTextExcerpt}
+        image={post.featured_image}
+        url={currentUrl}
+        published={post.created_at}
+        modified={post.updated_at}
+      />
+      
+      <BackLink to="/blog">← Back to Blog</BackLink>
       
       <HeaderContainer>
         <Title>{post.title}</Title>
         <PostInfo>
-          <span>Created on {formattedDate}</span>
+          <span>Published {formattedDate}</span>
           <StatusBadge $published={post.published}>
             {post.published ? 'Published' : 'Draft'}
           </StatusBadge>
         </PostInfo>
         
         <ButtonGroup>
-          <Link to={`/posts/edit/${id}`}>
-            <Button $variant="primary">Edit Post</Button>
-          </Link>
+          <Button onClick={() => navigate(`/posts/${id}/edit`)}>Edit</Button>
+          <Button $variant="danger" onClick={handleDelete}>Delete</Button>
           <Button 
-            $variant={post.published ? 'secondary' : 'success'}
+            $variant={post.published ? "warning" : "success"}
             onClick={handlePublishToggle}
           >
             {post.published ? 'Unpublish' : 'Publish'}
-          </Button>
-          <Button 
-            $variant="danger"
-            onClick={handleDelete}
-          >
-            Delete
           </Button>
         </ButtonGroup>
       </HeaderContainer>
@@ -439,6 +467,13 @@ const PostDetailPage = () => {
       )}
       
       <Content dangerouslySetInnerHTML={{ __html: post.content }} />
+      
+      {/* Social Sharing Component */}
+      <SocialShare 
+        url={currentUrl}
+        title={post.title}
+        summary={plainTextExcerpt}
+      />
       
       {post.images && post.images.length > 0 && (
         <AdditionalImages>

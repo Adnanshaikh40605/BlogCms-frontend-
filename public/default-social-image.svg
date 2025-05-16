@@ -1,0 +1,26 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0066cc"/>
+  
+  <!-- Gradient overlay -->
+  <rect width="1200" height="630" fill="url(#paint0_linear)"/>
+  
+  <!-- Blog CMS Title -->
+  <text x="600" y="250" font-family="Arial, sans-serif" font-weight="bold" font-size="90" text-anchor="middle" fill="white">Blog CMS</text>
+  
+  <!-- Tagline -->
+  <text x="600" y="340" font-family="Arial, sans-serif" font-size="42" text-anchor="middle" fill="white">Modern Content Management System</text>
+  
+  <!-- Decorative elements -->
+  <circle cx="200" cy="160" r="60" fill="white" fill-opacity="0.1"/>
+  <circle cx="1000" cy="500" r="80" fill="white" fill-opacity="0.1"/>
+  <path d="M0 500L300 300L500 400L700 250L900 350L1200 200" stroke="white" stroke-opacity="0.2" stroke-width="8"/>
+  
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="paint0_linear" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0066cc" stop-opacity="0"/>
+      <stop offset="1" stop-color="#003366" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+</svg> 
