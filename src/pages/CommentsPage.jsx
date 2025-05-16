@@ -228,6 +228,50 @@ const CommentsPage = () => {
     }
   };
   
+  // Handle replying to a comment
+  const handleReplyComment = async (commentId, replyContent) => {
+    try {
+      // Find the comment to reply to
+      const commentToReply = comments.find(c => c.id === commentId);
+      if (!commentToReply) {
+        throw new Error('Comment not found');
+      }
+      
+      // Prepare reply data
+      const replyData = {
+        parent_comment: commentId,
+        content: replyContent,
+        author_name: 'Admin', // Default admin reply
+        post: commentToReply.post // Use the same post ID
+      };
+      
+      console.log('Submitting reply:', replyData);
+      
+      // Submit the reply (API method needs to be implemented in backend)
+      const response = await commentAPI.create(replyData);
+      console.log('Reply submitted successfully:', response);
+      
+      // Update the comment with the new reply
+      const updatedComments = comments.map(comment => {
+        if (comment.id === commentId) {
+          // Initialize replies array if it doesn't exist
+          const existingReplies = comment.replies || [];
+          return { 
+            ...comment, 
+            replies: [...existingReplies, response]
+          };
+        }
+        return comment;
+      });
+      
+      setComments(updatedComments);
+      alert('Reply submitted successfully');
+    } catch (err) {
+      console.error('Error submitting reply:', err);
+      alert('Failed to submit reply. Please try again.');
+    }
+  };
+  
   // For development: show debug button
   const isDevelopment = import.meta.env.DEV;
   const [showDebug, setShowDebug] = useState(false);
@@ -293,7 +337,9 @@ const CommentsPage = () => {
               comment={comment}
               onApprove={handleApproveComment}
               onReject={handleRejectComment}
+              onReply={handleReplyComment}
               showActionButtons={filter !== 'approved' && filter !== 'rejected'}
+              showReplyOption={true}
             />
           ))}
         </CommentsList>
