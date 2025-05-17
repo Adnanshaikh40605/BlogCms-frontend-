@@ -483,15 +483,17 @@ const PostFormPage = () => {
         }
       }
       
-      // Ensure slug is populated - if empty, generate from title
-      if (!submissionData.slug && submissionData.title) {
-        submissionData.slug = submissionData.title
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, '') // Remove special characters
-          .replace(/\s+/g, '-')     // Replace spaces with hyphens
-          .replace(/--+/g, '-')     // Replace multiple hyphens with single hyphen
-          .trim();                  // Trim leading/trailing spaces or hyphens
-      }
+      // ALWAYS generate a slug from the title, even if one was provided manually
+      // This ensures consistency and avoids backend errors
+      submissionData.slug = submissionData.title
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '') // Remove special characters
+        .replace(/\s+/g, '-')     // Replace spaces with hyphens
+        .replace(/--+/g, '-')     // Replace multiple hyphens with single hyphen
+        .replace(/^-+|-+$/g, '')  // Remove leading/trailing hyphens
+        .trim();
+
+      console.log('Submitting post with data:', submissionData);
       
       if (isEditMode) {
         await postAPI.update(id, submissionData);

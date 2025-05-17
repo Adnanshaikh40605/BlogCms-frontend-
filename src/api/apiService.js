@@ -263,9 +263,27 @@ const postAPI = {
         Object.keys(postData).forEach(key => {
           // Skip files for now
           if (key !== 'featured_image' && key !== 'additional_images') {
+            console.log(`Adding field ${key}:`, postData[key]);
             formData.append(key, postData[key]);
           }
         });
+        
+        // Explicitly ensure slug is included
+        if (postData.slug) {
+          console.log('Setting explicit slug:', postData.slug);
+          formData.append('slug', postData.slug);
+        } else if (postData.title) {
+          // Generate slug from title as fallback
+          const slug = postData.title
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/--+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .trim();
+          console.log('Generated slug from title:', slug);
+          formData.append('slug', slug);
+        }
         
         // Handle featured image
         if (postData.featured_image instanceof File) {
@@ -283,6 +301,9 @@ const postAPI = {
         
         // Log form data for debugging
         console.log('Sending form data with files');
+        for (let [key, value] of formData.entries()) {
+          console.log(`FormData contains: ${key}`, value instanceof File ? value.name : value);
+        }
         
         const response = await fetch(`${API_URL}/api/posts/`, {
           method: 'POST',
@@ -296,6 +317,8 @@ const postAPI = {
       
       // Regular JSON submission without files
       console.log('Sending JSON data without files');
+      console.log('Post data:', postData);
+      
       const response = await fetch(`${API_URL}/api/posts/`, {
         method: 'POST',
         headers: getHeaders(),
@@ -323,9 +346,27 @@ const postAPI = {
         Object.keys(postData).forEach(key => {
           // Skip files for now
           if (key !== 'featured_image' && key !== 'additional_images') {
+            console.log(`Adding field ${key}:`, postData[key]);
             formData.append(key, postData[key]);
           }
         });
+        
+        // Explicitly ensure slug is included
+        if (postData.slug) {
+          console.log('Setting explicit slug:', postData.slug);
+          formData.append('slug', postData.slug);
+        } else if (postData.title) {
+          // Generate slug from title as fallback
+          const slug = postData.title
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/--+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .trim();
+          console.log('Generated slug from title:', slug);
+          formData.append('slug', slug);
+        }
         
         // Handle featured image
         if (postData.featured_image instanceof File) {
@@ -341,6 +382,12 @@ const postAPI = {
           });
         }
         
+        // Log form data for debugging
+        console.log('Sending form data with files for update');
+        for (let [key, value] of formData.entries()) {
+          console.log(`FormData contains: ${key}`, value instanceof File ? value.name : value);
+        }
+        
         const response = await fetch(`${API_URL}/api/posts/${id}/`, {
           method: 'PATCH',
           headers: getHeaders(false), // Don't include Content-Type for file uploads
@@ -352,6 +399,9 @@ const postAPI = {
       }
       
       // Regular JSON submission without files
+      console.log('Sending JSON data without files for update');
+      console.log('Post data:', postData);
+      
       const response = await fetch(`${API_URL}/api/posts/${id}/`, {
         method: 'PATCH',
         headers: getHeaders(),
