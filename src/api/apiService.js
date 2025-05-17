@@ -1086,7 +1086,6 @@ export {
   commentAPI,
   ckEditorAPI,
   debugAPI,
-  mediaAPI,
   API_URL,
   MEDIA_URL
 }; 
