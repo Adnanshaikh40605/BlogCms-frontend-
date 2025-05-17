@@ -472,7 +472,7 @@ const PostDetailPage = () => {
       <SocialShare 
         url={currentUrl}
         title={post.title}
-        summary={plainTextExcerpt}
+        description={plainTextExcerpt}
       />
       
       {post.images && post.images.length > 0 && (
