@@ -1,113 +1,166 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import BlogPostCard from './BlogPostCard';
+import SkeletonLoader from './SkeletonLoader';
 import { postAPI } from '../api/apiService';
 
-const BlogPostList = () => {
+const PostsContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+  
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+`;
+
+const ErrorMessage = styled.div`
+  padding: 1.5rem;
+  background-color: #fff8f8;
+  border-left: 4px solid #dc3545;
+  border-radius: 4px;
+  color: #dc3545;
+`;
+
+const LoadMoreButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  background-color: #0066cc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  margin: 1rem auto;
+  display: block;
+  
+  &:hover {
+    background-color: #0055aa;
+  }
+  
+  &:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+`;
+
+const LoaderContainer = styled.div`
+  text-align: center;
+  padding: 1rem;
+`;
+
+const BlogPostList = ({ 
+  limit = 6, 
+  loadMoreIncrement = 3, 
+  showLoadMore = true,
+  filter = {},
+  title = "Latest Posts" 
+}) => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [visiblePostCount, setVisiblePostCount] = useState(limit);
+  const [hasMore, setHasMore] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
+  // Fetch posts when component mounts or filter changes
   useEffect(() => {
     const fetchPosts = async () => {
       try {
         setLoading(true);
-        // Get published posts with pagination
-        const data = await postAPI.getAll({ 
-          published: true, 
-          page: page, 
-          page_size: 5 
+        setError(null);
+        
+        // Build query params from filter object
+        const response = await postAPI.getAll({
+          ...filter,
+          limit: 100 // Get more than we need to check if there are more
         });
         
-        // Calculate total pages if pagination info is available
-        const count = data.count || data.results.length;
-        const calculatedTotalPages = Math.ceil(count / 5);
+        if (!Array.isArray(response)) {
+          // Handle paginated response
+          if (response.results && Array.isArray(response.results)) {
+            setPosts(response.results);
+            setHasMore(!!response.next);
+          } else {
+            throw new Error('Invalid response format');
+          }
+        } else {
+          // Handle direct array response
+          setPosts(response);
+          setHasMore(response.length > visiblePostCount);
+        }
         
-        setPosts(data.results || []);
-        setTotalPages(calculatedTotalPages || 1);
-        setLoading(false);
+        setInitialLoad(false);
       } catch (err) {
-        console.error("Error fetching posts:", err);
+        console.error('Error fetching posts:', err);
         setError('Failed to load blog posts. Please try again later.');
+        setInitialLoad(false);
+      } finally {
         setLoading(false);
       }
     };
-
+    
     fetchPosts();
-  }, [page]);
+  }, [filter]);
 
-  const handlePrevPage = () => {
-    if (page > 1) {
-      setPage(page - 1);
-    }
+  // Handle load more click
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    
+    // Simulate loading delay for better UX
+    setTimeout(() => {
+      setVisiblePostCount(prev => prev + loadMoreIncrement);
+      setLoadingMore(false);
+      
+      // Check if we have more posts to show
+      setHasMore(posts.length > visiblePostCount + loadMoreIncrement);
+    }, 500);
   };
 
-  const handleNextPage = () => {
-    if (page < totalPages) {
-      setPage(page + 1);
-    }
-  };
+  // Show skeleton loader during initial load
+  if (initialLoad) {
+    return (
+      <div>
+        <h2>{title}</h2>
+        <PostsContainer>
+          <SkeletonLoader variant="card" count={limit} />
+        </PostsContainer>
+      </div>
+    );
+  }
 
-  if (loading) return <div>Loading posts...</div>;
-  if (error) return <div className="error-message">{error}</div>;
+  if (error) {
+    return <ErrorMessage>{error}</ErrorMessage>;
+  }
+
+  const visiblePosts = posts.slice(0, visiblePostCount);
 
   return (
-    <div className="blog-posts-container">
-      <h1>Latest Blog Posts</h1>
-      {posts.length === 0 ? (
-        <p>No posts available.</p>
+    <div>
+      <h2>{title}</h2>
+      
+      {visiblePosts.length === 0 ? (
+        <p>No posts found.</p>
       ) : (
         <>
-          <div className="post-grid">
-            {posts.map((post) => (
-              <div key={post.id} className="blog-post-card">
-                {post.featured_image && (
-                  <div className="post-image">
-                    <img 
-                      src={post.featured_image} 
-                      alt={post.title} 
-                      onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/300x200?text=No+Image';
-                      }}
-                    />
-                  </div>
-                )}
-                <div className="post-content">
-                  <h2 className="post-title">{post.title}</h2>
-                  <div className="post-date">
-                    {new Date(post.created_at).toLocaleDateString()}
-                  </div>
-                  <div className="post-excerpt">
-                    {post.content.substring(0, 150)}...
-                  </div>
-                  <a href={`/blog/${post.id}`} className="read-more">
-                    Read More
-                  </a>
-                </div>
-              </div>
+          <PostsContainer>
+            {visiblePosts.map(post => (
+              <BlogPostCard key={post.id} post={post} />
             ))}
-          </div>
+          </PostsContainer>
           
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button 
-                onClick={handlePrevPage} 
-                disabled={page === 1}
-                className="pagination-button"
-              >
-                Previous
-              </button>
-              <span className="page-info">
-                Page {page} of {totalPages}
-              </span>
-              <button 
-                onClick={handleNextPage} 
-                disabled={page === totalPages}
-                className="pagination-button"
-              >
-                Next
-              </button>
-            </div>
+          {showLoadMore && hasMore && (
+            loadingMore ? (
+              <LoaderContainer>
+                <SkeletonLoader variant="text" width="120px" height="40px" />
+              </LoaderContainer>
+            ) : (
+              <LoadMoreButton onClick={handleLoadMore}>
+                Load More
+              </LoadMoreButton>
+            )
           )}
         </>
       )}

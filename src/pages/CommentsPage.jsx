@@ -231,41 +231,40 @@ const CommentsPage = () => {
   // Handle replying to a comment
   const handleReplyComment = async (commentId, replyContent) => {
     try {
-      // Find the comment to reply to
-      const commentToReply = comments.find(c => c.id === commentId);
-      if (!commentToReply) {
-        throw new Error('Comment not found');
-      }
-      
       // Prepare reply data
       const replyData = {
-        parent_comment: commentId,
-        content: replyContent,
-        author_name: 'Admin', // Default admin reply
-        post: commentToReply.post // Use the same post ID
+        admin_reply: replyContent
       };
       
-      console.log('Submitting reply:', replyData);
+      console.log('Submitting admin reply:', replyData);
       
-      // Submit the reply (API method needs to be implemented in backend)
-      const response = await commentAPI.create(replyData);
-      console.log('Reply submitted successfully:', response);
+      // Submit the admin reply
+      const response = await commentAPI.replyToComment(commentId, replyData);
+      console.log('Admin reply submitted successfully:', response);
       
-      // Update the comment with the new reply
-      const updatedComments = comments.map(comment => {
-        if (comment.id === commentId) {
-          // Initialize replies array if it doesn't exist
-          const existingReplies = comment.replies || [];
-          return { 
-            ...comment, 
-            replies: [...existingReplies, response]
-          };
+      // Update the comment with the new reply if it exists in our local state
+      if (response && response.comment) {
+        // Use the comment from the response instead of finding it locally
+        setComments(prevComments => 
+          prevComments.map(comment => 
+            comment.id === commentId 
+              ? { ...comment, admin_reply: replyContent }
+              : comment
+          )
+        );
+        alert('Reply submitted successfully');
+      } else {
+        // If we can't find the comment in our state, refresh the list
+        alert('Reply submitted successfully. Refreshing comment list...');
+        
+        // Refetch comments with current filter
+        const url = `${API_URL}/api/comments/?${filter === 'pending' ? 'approved=false' : filter === 'approved' ? 'approved=true' : ''}`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          setComments(Array.isArray(data) ? data : []);
         }
-        return comment;
-      });
-      
-      setComments(updatedComments);
-      alert('Reply submitted successfully');
+      }
     } catch (err) {
       console.error('Error submitting reply:', err);
       alert('Failed to submit reply. Please try again.');
@@ -338,8 +337,7 @@ const CommentsPage = () => {
               onApprove={handleApproveComment}
               onReject={handleRejectComment}
               onReply={handleReplyComment}
-              showActionButtons={filter !== 'approved' && filter !== 'rejected'}
-              showReplyOption={true}
+              showActionButtons={true}
             />
           ))}
         </CommentsList>

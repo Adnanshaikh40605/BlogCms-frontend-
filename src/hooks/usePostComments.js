@@ -72,7 +72,7 @@ export const usePostComments = (postId, autoFetch = true) => {
   }, [fetchComments, loading, hasMore, page]);
 
   /**
-   * Submit a new comment
+   * Submit a new comment or reply
    */
   const submitComment = useCallback(async (commentData) => {
     if (!postId) {
@@ -95,6 +95,11 @@ export const usePostComments = (postId, autoFetch = true) => {
       const result = await commentAPI.create(fullCommentData);
       
       console.log('Comment submitted successfully:', result);
+      
+      // If it's a new top-level comment that's pre-approved, add it to the list
+      if (result.approved) {
+        setComments(currentComments => [result, ...currentComments]);
+      }
       
       // Mark as submitted
       setCommentSubmitted(true);

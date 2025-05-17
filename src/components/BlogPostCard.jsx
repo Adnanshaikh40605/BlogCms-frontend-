@@ -1,39 +1,89 @@
-import { Link } from 'react-router-dom';
+import React from 'react';
 import styled from 'styled-components';
+import { Link } from 'react-router-dom';
+import LazyImage from './LazyImage';
+import { mediaAPI } from '../api/apiService';
 import { formatDate } from '../utils/dateUtils';
 import placeholderImage from '../assets/placeholder-image.js';
 
 const Card = styled.div`
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
   background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   height: 100%;
   display: flex;
   flex-direction: column;
-  border: 1px solid #eaeaea;
   
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
   }
 `;
 
 const ImageContainer = styled.div`
-  height: 200px;
-  overflow: hidden;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
   position: relative;
-  background-color: #f3f3f3;
+  overflow: hidden;
 `;
 
-const PostImage = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  position: absolute;
-  top: 0;
-  left: 0;
+const CardContent = styled.div`
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+`;
+
+const Title = styled.h3`
+  font-size: 1.25rem;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #333;
+  line-height: 1.4;
+  
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+  }
+`;
+
+const Excerpt = styled.div`
+  color: #666;
+  margin-bottom: 1rem;
+  flex-grow: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  
+  p {
+    margin-top: 0;
+  }
+`;
+
+const Meta = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: auto;
+`;
+
+const Date = styled.span``;
+
+const ReadMore = styled(Link)`
+  display: inline-block;
+  color: #0066cc;
+  font-weight: 500;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const PlaceholderImage = styled.div`
@@ -51,41 +101,13 @@ const PlaceholderImage = styled.div`
   }
 `;
 
-const CardContent = styled.div`
-  padding: 1.5rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-`;
-
-const Title = styled.h3`
-  margin: 0 0 0.75rem 0;
-  color: #333;
-  font-size: 1.25rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  line-height: 1.4;
-`;
-
-const Excerpt = styled.p`
-  margin: 0 0 1.25rem 0;
-  color: #666;
-  font-size: 0.9rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-`;
-
-const StyledLink = styled(Link)`
-  text-decoration: none;
-  color: inherit;
-  display: inline-block;
+const PostImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
 `;
 
 const PostMeta = styled.div`
@@ -134,51 +156,54 @@ const BlogPostCard = ({ post }) => {
     return null;
   }
   
-  // Handle error posts (marked with _error_occurred)
-  if (post._error_occurred) {
-    return (
-      <Card>
-        <CardContent>
-          <Title style={{ color: '#dc3545' }}>{post.title}</Title>
-          <Excerpt>{post.content}</Excerpt>
-          <PostMeta>
-            <PostDate>{formatDate(post.created_at)}</PostDate>
-            <ReadTime>Error loading post</ReadTime>
-          </PostMeta>
-        </CardContent>
-      </Card>
-    );
-  }
+  const imageUrl = post.featured_image 
+    ? mediaAPI.getImageUrl(post.featured_image)
+    : null;
+  
+  // Create a clean excerpt from the post content
+  const createExcerpt = (content, maxLength = 120) => {
+    // Remove HTML tags
+    const plainText = content.replace(/<[^>]+>/g, ' ');
+    
+    // Truncate to max length
+    if (plainText.length <= maxLength) return plainText;
+    
+    // Find the last space before maxLength
+    const excerpt = plainText.substring(0, maxLength);
+    const lastSpaceIndex = excerpt.lastIndexOf(' ');
+    
+    if (lastSpaceIndex > 0) {
+      return excerpt.substring(0, lastSpaceIndex) + '...';
+    }
+    
+    return excerpt + '...';
+  };
+  
+  const excerpt = post.content ? createExcerpt(post.content) : '';
+  const formattedDate = formatDate(post.created_at);
   
   return (
     <Card>
-      <ImageContainer>
-        {post.featured_image ? (
-          <PostImage 
-            src={post.featured_image} 
+      {imageUrl && (
+        <ImageContainer>
+          <LazyImage
+            src={imageUrl}
             alt={post.title}
-            onError={(e) => {
-              e.target.src = placeholderImage;
-            }}
+            aspectRatio="16/9"
+            borderRadius="8px 8px 0 0"
           />
-        ) : (
-          <PlaceholderImage />
-        )}
-      </ImageContainer>
+        </ImageContainer>
+      )}
+      
       <CardContent>
-        <Title>
-          <StyledLink to={`/blog/${post.id}`}>{post.title}</StyledLink>
-        </Title>
-        <Excerpt>
-          {post.excerpt || 'Click to read more about our professional driving services and insights.'}
-        </Excerpt>
-        <PostMeta>
-          <PostDate>{formatDate(post.created_at)}</PostDate>
-          <ReadTime>{post.read_time || '5 min read'}</ReadTime>
-        </PostMeta>
-        <ReadMoreButton to={`/blog/${post.id}`}>
-          Read More
-        </ReadMoreButton>
+        <Title>{post.title}</Title>
+        
+        {excerpt && <Excerpt dangerouslySetInnerHTML={{ __html: excerpt }} />}
+        
+        <Meta>
+          <Date>{formattedDate}</Date>
+          <ReadMore to={`/posts/${post.id}`}>Read More</ReadMore>
+        </Meta>
       </CardContent>
     </Card>
   );

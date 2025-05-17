@@ -801,7 +801,11 @@ const BlogPostPage = () => {
           ) : comments.length > 0 ? (
             <CommentsList>
               {comments.map(comment => (
-                <Comment key={comment.id} comment={comment} showActionButtons={false} />
+                <Comment 
+                  key={comment.id} 
+                  comment={comment} 
+                  showActionButtons={false}
+                />
               ))}
               
               {hasMoreComments && (
