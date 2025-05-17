@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
-import LazyImage from './LazyImage';
+import Image from './Image';
 import { mediaAPI } from '../api/apiService';
 import { formatDate } from '../utils/dateUtils';
 import placeholderImage from '../assets/placeholder-image.js';
@@ -186,7 +186,7 @@ const BlogPostCard = ({ post }) => {
     <Card>
       {imageUrl && (
         <ImageContainer>
-          <LazyImage
+          <Image
             src={imageUrl}
             alt={post.title}
             aspectRatio="16/9"

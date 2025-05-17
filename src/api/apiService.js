@@ -64,43 +64,6 @@ export const mediaAPI = {
   }
 };
 
-// Add health check to verify API connection
-const checkApiHealth = async () => {
-  try {
-    console.log('Running API health check...');
-    
-    // Use the detailed health check for more comprehensive information
-    const healthResults = await debugAPI.runDetailedHealthCheck();
-    
-    // Log detailed results
-    console.log('Health check results:', healthResults);
-    
-    if (healthResults.basicApiConnection) {
-      console.log('✅ API connection successful! Backend is reachable.');
-      
-      // Check database connection
-      if (healthResults.databaseConnection) {
-        console.log('✅ Database connection successful!');
-      } else {
-        console.error('❌ Database connection failed!', 
-          healthResults.errors.find(e => e.test === 'databaseConnection')?.message || 'Unknown error');
-      }
-      
-      return healthResults.basicApiConnection && healthResults.databaseConnection;
-    } else {
-      console.error('❌ API connection failed!', 
-        healthResults.errors.find(e => e.test === 'basicApiConnection')?.message || 'Unknown error');
-      return false;
-    }
-  } catch (error) {
-    console.error('❌ API health check failed!', error.message);
-    return false;
-  }
-};
-
-// Run health check on load
-checkApiHealth();
-
 // Helper function to get cookies (for CSRF token)
 function getCookie(name) {
   const value = `; ${document.cookie}`;
@@ -165,18 +128,6 @@ const postAPI = {
           
           console.log('Fetching posts from URL:', url);
           
-          try {
-            // First try to ping the API to check if it's responding
-            const healthCheck = await fetch(`${API_URL}/debug-info/`, { method: 'GET' });
-            if (!healthCheck.ok) {
-              console.error('API health check failed:', healthCheck.status, healthCheck.statusText);
-            } else {
-              console.log('API health check successful');
-            }
-          } catch (healthError) {
-            console.error('API health check error:', healthError);
-          }
-          
           const response = await fetch(url);
           
           if (!response.ok) {
@@ -198,18 +149,6 @@ const postAPI = {
         const url = queryParams ? `${API_URL}/api/posts/?${queryParams}` : `${API_URL}/api/posts/`;
         
         console.log('Fetching posts from URL:', url);
-        
-        try {
-          // First try to ping the API to check if it's responding
-          const healthCheck = await fetch(`${API_URL}/debug-info/`, { method: 'GET' });
-          if (!healthCheck.ok) {
-            console.error('API health check failed:', healthCheck.status, healthCheck.statusText);
-          } else {
-            console.log('API health check successful');
-          }
-        } catch (healthError) {
-          console.error('API health check error:', healthError);
-        }
         
         const response = await fetch(url);
         
@@ -894,7 +833,76 @@ const commentAPI = {
       console.error('Error bulk rejecting comments:', error);
       throw error;
     }
-  }
+  },
+
+  // Trash a comment
+  trashComment: async (commentId) => {
+    try {
+      if (!commentId) {
+        throw new Error('Comment ID is required');
+      }
+      
+      const url = `${API_URL}/api/comments/trash/`;
+      console.log('Trashing comment:', commentId);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ comment_id: commentId })
+      });
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error trashing comment:', error);
+      throw error;
+    }
+  },
+
+  // Restore a comment from trash
+  restoreComment: async (commentId) => {
+    try {
+      if (!commentId) {
+        throw new Error('Comment ID is required');
+      }
+      
+      const url = `${API_URL}/api/comments/restore/`;
+      console.log('Restoring comment:', commentId);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ comment_id: commentId })
+      });
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error restoring comment:', error);
+      throw error;
+    }
+  },
+
+  // Permanently delete a comment
+  deleteComment: async (commentId) => {
+    try {
+      if (!commentId) {
+        throw new Error('Comment ID is required');
+      }
+      
+      const url = `${API_URL}/api/comments/delete/`;
+      console.log('Permanently deleting comment:', commentId);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ comment_id: commentId })
+      });
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      throw error;
+    }
+  },
 };
 
 // CKEditor API helper
@@ -930,42 +938,11 @@ const uploadImageToServer = async (file) => {
   const formData = new FormData();
   formData.append('upload', file);
   
-  // Try the custom debug endpoint first, which provides more detailed error information
-  const debugUploadUrl = `${API_URL}/api/debug-ckeditor-upload/`;
-  console.log('Using debug upload URL:', debugUploadUrl);
-  
-  try {
-    console.log('Attempting to use debug endpoint first...');
-    const debugResponse = await fetch(debugUploadUrl, {
-      method: 'POST',
-      headers: getHeaders(false), // Don't include Content-Type for file uploads
-      credentials: 'include',
-      body: formData
-    });
-    
-    // Check if the debug endpoint worked
-    if (debugResponse.ok) {
-      console.log('Debug endpoint successful');
-      const result = await debugResponse.json();
-      console.log('Debug upload response:', result);
-      
-      if (result && result.url) {
-        return { url: result.url };
-      }
-    } else {
-      console.warn('Debug endpoint failed, will try regular endpoint');
-      const errorText = await debugResponse.text();
-      console.error('Debug endpoint error:', errorText);
-    }
-  } catch (debugError) {
-    console.warn('Error using debug endpoint:', debugError.message);
-  }
-  
-  // Fall back to the regular CKEditor endpoint
+  // Use the standard CKEditor endpoint
   const uploadUrl = `${API_URL}/ckeditor5/image_upload/`;
-  console.log('Falling back to standard upload URL:', uploadUrl);
+  console.log('Using CKEditor upload URL:', uploadUrl);
   
-  // Clone the FormData since it might have been consumed
+  // Prepare the form data
   const freshFormData = new FormData();
   freshFormData.append('upload', file);
   
@@ -984,7 +961,7 @@ const uploadImageToServer = async (file) => {
   }
   
   const result = await handleResponse(response);
-  console.log('CKEditor standard image upload response:', result);
+  console.log('CKEditor image upload response:', result);
   
   // Standardize response structure across environments
   // CKEditor 5 expects a response with either url or error
@@ -1000,142 +977,11 @@ const uploadImageToServer = async (file) => {
   }
 };
 
-// Debug/utility API
-const debugAPI = {
-  // Get debug info
-  getDebugInfo: async () => {
-    try {
-      const response = await fetch(`${API_URL}/debug-info/`);
-      return handleResponse(response);
-    } catch (error) {
-      console.error('API Error fetching debug info:', error);
-      throw error;
-    }
-  },
-  
-  // Test database connection
-  testDatabaseConnection: async () => {
-    try {
-      console.log('Testing database connection...');
-      
-      // First, try the test-db endpoint with trailing slash
-      try {
-        const response = await fetch(`${API_URL}/test-db/`);
-        return handleResponse(response);
-      } catch (error) {
-        console.log('Error with /test-db/, trying without trailing slash...');
-        // If first attempt fails, try without the trailing slash
-        const response = await fetch(`${API_URL}/test-db`);
-        return handleResponse(response);
-      }
-    } catch (error) {
-      console.error('API Error testing database connection:', error);
-      
-      // Provide more specific error information for common Railway database issues
-      const errorMsg = error.message || '';
-      if (errorMsg.includes('Failed to fetch')) {
-        return {
-          status: 'error',
-          error_type: 'ConnectionError',
-          error_message: 'Failed to connect to the API server. The server may be down or unreachable.',
-          railway_specific: 'Check if your Railway service is deployed and running correctly.'
-        };
-      }
-      
-      throw error;
-    }
-  },
-  
-  // Run detailed health check
-  runDetailedHealthCheck: async () => {
-    const results = {
-      basicApiConnection: false,
-      debugInfoAvailable: false,
-      databaseConnection: false,
-      errors: [],
-      railwaySpecificChecks: {
-        isRailwayEnvironment: false
-      }
-    };
-    
-    try {
-      // Basic API check
-      try {
-        const response = await fetch(`${API_URL}/`);
-        results.basicApiConnection = response.ok;
-        
-        // Check if we're running on Railway
-        const host = response.headers.get('host') || '';
-        if (host.includes('railway.app')) {
-          results.railwaySpecificChecks.isRailwayEnvironment = true;
-        }
-      } catch (error) {
-        results.errors.push({
-          test: 'basicApiConnection',
-          message: `API connection failed: ${error.message}`,
-          details: error.toString()
-        });
-      }
-      
-      // Debug info check
-      try {
-        const debugInfo = await debugAPI.getDebugInfo();
-        results.debugInfoAvailable = true;
-        results.debugInfo = debugInfo;
-        
-        // Check if debug info contains database information
-        if (debugInfo.database) {
-          results.databaseInfo = {
-            type: debugInfo.database,
-            debug_mode: debugInfo.settings_debug,
-            allowed_hosts: debugInfo.allowed_hosts
-          };
-        }
-      } catch (error) {
-        results.errors.push({
-          test: 'debugInfoAvailable',
-          message: `Debug info check failed: ${error.message}`,
-          details: error.toString()
-        });
-      }
-      
-      // Database connection check
-      try {
-        const dbTest = await debugAPI.testDatabaseConnection();
-        results.databaseConnection = dbTest.status === 'success';
-        results.databaseTestDetails = dbTest;
-      } catch (error) {
-        results.errors.push({
-          test: 'databaseConnection',
-          message: `Database connection failed: ${error.message}`,
-          details: error.toString()
-        });
-      }
-      
-      // Specific Railway database checks if in Railway environment
-      if (results.railwaySpecificChecks.isRailwayEnvironment) {
-        results.railwaySpecificChecks.recommendations = [
-          'Verify DATABASE_URL environment variable is properly set in Railway',
-          'Check if your PostgreSQL service is running in Railway',
-          'Make sure your app has the correct connection parameters',
-          'Verify network connectivity between your Railway services'
-        ];
-      }
-      
-      return results;
-    } catch (error) {
-      console.error('Error running health check:', error);
-      throw error;
-    }
-  }
-};
-
 export { 
   postAPI, 
   imageAPI, 
   commentAPI,
   ckEditorAPI,
-  debugAPI,
   API_URL,
   MEDIA_URL
 }; 

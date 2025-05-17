@@ -7,7 +7,6 @@ import {
   RouterProvider
 } from 'react-router-dom';
 import { createGlobalStyle, styled } from 'styled-components';
-import { useState, useEffect } from 'react';
 
 // Context Providers
 import { BlogProvider } from './context/BlogContext';
@@ -25,23 +24,6 @@ import CommentsPage from './pages/CommentsPage';
 import BlogListPage from './pages/BlogListPage';
 import BlogPage from './pages/BlogPage';
 import BlogPostPage from './pages/BlogPostPage';
-import DiagnosticPage from './pages/DiagnosticPage';
-
-// Add a global loading indicator component
-const LoadingIndicator = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #ffcc00, #ffd633);
-  z-index: 9999;
-  opacity: ${props => props.$isLoading ? 1 : 0};
-  transform: ${props => props.$isLoading ? 'scaleX(0.5)' : 'scaleX(1)'};
-  transform-origin: left;
-  transition: transform 0.3s ease-in-out, opacity 0.2s ease-out;
-  transition-delay: 0s, 0.3s;
-`;
 
 // Global styles
 const GlobalStyle = createGlobalStyle`
@@ -118,45 +100,9 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 const App = () => {
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Global navigation loading indicator
-  useEffect(() => {
-    const handleStart = () => {
-      setIsLoading(true);
-    };
-
-    const handleStop = () => {
-      // Small delay to ensure smooth transitions
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
-    };
-
-    // For modern browsers
-    window.addEventListener('beforeunload', handleStart);
-    window.addEventListener('load', handleStop);
-
-    // For React Router
-    const originalPushState = history.pushState;
-    history.pushState = function() {
-      handleStart();
-      const result = originalPushState.apply(this, arguments);
-      setTimeout(handleStop, 500); // Give time for the page to load
-      return result;
-    };
-
-    return () => {
-      window.removeEventListener('beforeunload', handleStart);
-      window.removeEventListener('load', handleStop);
-      history.pushState = originalPushState;
-    };
-  }, []);
-
   return (
     <BlogProvider>
       <CommentProvider>
-        <LoadingIndicator $isLoading={isLoading} />
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <GlobalStyle />
           <Routes>
@@ -174,9 +120,6 @@ const App = () => {
               {/* Public blog routes */}
               <Route path="blog" element={<BlogListPage />} />
               <Route path="blog/:id" element={<BlogPostPage />} />
-              
-              {/* Diagnostic route */}
-              <Route path="diagnostics" element={<DiagnosticPage />} />
             </Route>
           </Routes>
         </Router>

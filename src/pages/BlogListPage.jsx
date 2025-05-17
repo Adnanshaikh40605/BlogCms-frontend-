@@ -5,7 +5,7 @@ import { postAPI, mediaAPI } from '../api/apiService';
 import BlogHeader from '../components/BlogHeader';
 import BlogFooter from '../components/BlogFooter';
 import SEO from '../components/SEO';
-import LazyImage from '../components/LazyImage';
+import Image from '../components/Image';
 import placeholderImage from '../assets/placeholder-image.js';
 
 const PageContainer = styled.div`

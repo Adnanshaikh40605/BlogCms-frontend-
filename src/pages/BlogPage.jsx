@@ -4,7 +4,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { postAPI, mediaAPI } from '../api/apiService';
 import SEO from '../components/SEO';
 import SocialShare from '../components/SocialShare';
-import LazyImage from '../components/LazyImage';
+import Image from '../components/Image';
 
 const BlogContainer = styled.div`
   max-width: 800px;
@@ -221,7 +221,7 @@ const BlogPage = () => {
       </BlogHeader>
 
       {imageUrl && (
-        <LazyImage
+        <Image
           src={imageUrl}
           alt={post.title}
           aspectRatio="16/9"

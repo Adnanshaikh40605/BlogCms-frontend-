@@ -6,13 +6,20 @@ import { sanitize } from '../utils/sanitize';
 import AdminReplyForm from './AdminReplyForm';
 
 const CommentContainer = styled.div`
-  background-color: ${props => props.$approved ? '#ffffff' : '#fff8f8'};
+  background-color: ${props => {
+    if (props.$isTrash) return '#f8f9fa';
+    return props.$approved ? '#ffffff' : '#fff8f8';
+  }};
   border-radius: 8px;
   padding: 1.25rem;
   margin-bottom: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  border-left: 4px solid ${props => props.$approved ? '#28a745' : '#dc3545'};
+  border-left: 4px solid ${props => {
+    if (props.$isTrash) return '#6c757d';
+    return props.$approved ? '#28a745' : '#dc3545';
+  }};
   transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  opacity: ${props => props.$isTrash ? 0.8 : 1};
 `;
 
 const CommentHeader = styled.div`
@@ -22,9 +29,19 @@ const CommentHeader = styled.div`
   margin-bottom: 0.75rem;
 `;
 
+const AuthorInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
 const AuthorName = styled.span`
   font-weight: 600;
   color: #333;
+`;
+
+const AuthorEmail = styled.span`
+  color: #6c757d;
+  font-size: 0.8rem;
 `;
 
 const Date = styled.span`
@@ -41,23 +58,10 @@ const Content = styled.div`
   transition: color 0.3s ease;
 `;
 
-const ApprovalButton = styled(Button)`
-  margin-top: 0.5rem;
-  margin-left: 0.5rem;
-`;
-
-const RejectButton = styled(Button)`
-  margin-top: 0.5rem;
-`;
-
-const ReplyButton = styled(Button)`
-  margin-top: 0.5rem;
-  margin-left: 0.5rem;
-`;
-
 const ButtonContainer = styled.div`
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 `;
 
 const BadgeContainer = styled.div`
@@ -73,8 +77,14 @@ const StatusBadge = styled.span`
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: bold;
-  background-color: ${props => props.$approved ? '#d4edda' : '#f8d7da'};
-  color: ${props => props.$approved ? '#155724' : '#721c24'};
+  background-color: ${props => {
+    if (props.$isTrash) return '#e9ecef';
+    return props.$approved ? '#d4edda' : '#f8d7da';
+  }};
+  color: ${props => {
+    if (props.$isTrash) return '#6c757d';
+    return props.$approved ? '#155724' : '#721c24';
+  }};
   transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
@@ -105,12 +115,39 @@ const AdminReplyContent = styled.div`
   white-space: pre-line;
 `;
 
+const ActionButton = styled(Button)`
+  margin-top: 0.5rem;
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
+`;
+
+const PostInfo = styled.div`
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.5rem;
+`;
+
+const PostTitle = styled.a`
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
 const Comment = ({ 
   comment, 
   onApprove, 
   onReject,
   onReply,
-  showActionButtons = false
+  onTrash,
+  onRestore,
+  onDelete,
+  showActionButtons = false,
+  showPostInfo = false
 }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [currentComment, setCurrentComment] = useState(comment);
@@ -123,6 +160,7 @@ const Comment = ({
   // Sanitize content
   const sanitizedContent = sanitize(currentComment.content);
   const authorName = currentComment.author_name || 'Anonymous';
+  const isTrash = currentComment.is_trash || false;
   
   // Handle reply submission callback
   const handleReplied = (updatedComment) => {
@@ -138,9 +176,20 @@ const Comment = ({
   };
   
   return (
-    <CommentContainer $approved={currentComment.approved}>
+    <CommentContainer $approved={currentComment.approved} $isTrash={isTrash}>
+      {showPostInfo && currentComment.post && (
+        <PostInfo>
+          On post: <PostTitle href={`/posts/${currentComment.post.id}`}>{currentComment.post.title || `Post #${currentComment.post.id}`}</PostTitle>
+        </PostInfo>
+      )}
+      
       <CommentHeader>
-        <AuthorName>{authorName}</AuthorName>
+        <AuthorInfo>
+          <AuthorName>{authorName}</AuthorName>
+          {currentComment.author_email && (
+            <AuthorEmail>{currentComment.author_email}</AuthorEmail>
+          )}
+        </AuthorInfo>
         <Date title={formattedDate}>{relativeTime || formattedDate}</Date>
       </CommentHeader>
       
@@ -160,42 +209,82 @@ const Comment = ({
       
       <BadgeContainer>
         {showActionButtons && (
-          <StatusBadge $approved={currentComment.approved}>
-            {currentComment.approved ? 'Approved' : 'Pending Approval'}
+          <StatusBadge $approved={currentComment.approved} $isTrash={isTrash}>
+            {isTrash ? 'In Trash' : (currentComment.approved ? 'Approved' : 'Pending Approval')}
           </StatusBadge>
         )}
         
-        <ButtonContainer>
-          {showActionButtons && !currentComment.approved && (
-            <>
-              <RejectButton 
-                $variant="danger" 
-                onClick={() => onReject(currentComment.id)}
+        {showActionButtons && (
+          <ButtonContainer>
+            {!isTrash && !currentComment.approved && (
+              <>
+                <ActionButton 
+                  $variant="danger" 
+                  onClick={() => onReject && onReject(currentComment.id)}
+                  size="small"
+                >
+                  Reject
+                </ActionButton>
+                <ActionButton 
+                  $variant="success" 
+                  onClick={() => onApprove && onApprove(currentComment.id)}
+                  size="small"
+                >
+                  Approve
+                </ActionButton>
+              </>
+            )}
+            
+            {!isTrash && currentComment.approved && (
+              <>
+                <ActionButton 
+                  $variant="warning" 
+                  onClick={() => onReject && onReject(currentComment.id)}
+                  size="small"
+                >
+                  Unapprove
+                </ActionButton>
+                <ActionButton 
+                  $variant="primary" 
+                  onClick={() => setShowReplyForm(true)} 
+                  size="small"
+                  disabled={showReplyForm}
+                >
+                  {currentComment.admin_reply ? 'Edit Reply' : 'Reply'}
+                </ActionButton>
+              </>
+            )}
+            
+            {!isTrash && (
+              <ActionButton 
+                $variant="secondary" 
+                onClick={() => onTrash && onTrash(currentComment.id)}
                 size="small"
               >
-                Reject
-              </RejectButton>
-              <ApprovalButton 
-                $variant="success" 
-                onClick={() => onApprove(currentComment.id)}
-                size="small"
-              >
-                Approve
-              </ApprovalButton>
-            </>
-          )}
-          
-          {showActionButtons && currentComment.approved && (
-            <ReplyButton 
-              $variant="primary" 
-              onClick={() => setShowReplyForm(true)} 
-              size="small"
-              disabled={showReplyForm}
-            >
-              {currentComment.admin_reply ? 'Edit Reply' : 'Reply'}
-            </ReplyButton>
-          )}
-        </ButtonContainer>
+                Trash
+              </ActionButton>
+            )}
+            
+            {isTrash && (
+              <>
+                <ActionButton 
+                  $variant="primary" 
+                  onClick={() => onRestore && onRestore(currentComment.id)}
+                  size="small"
+                >
+                  Restore
+                </ActionButton>
+                <ActionButton 
+                  $variant="danger" 
+                  onClick={() => onDelete && onDelete(currentComment.id)}
+                  size="small"
+                >
+                  Delete Permanently
+                </ActionButton>
+              </>
+            )}
+          </ButtonContainer>
+        )}
       </BadgeContainer>
       
       {/* Show reply form when needed */}
