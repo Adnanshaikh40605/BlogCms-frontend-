@@ -483,6 +483,16 @@ const PostFormPage = () => {
         }
       }
       
+      // Ensure slug is populated - if empty, generate from title
+      if (!submissionData.slug && submissionData.title) {
+        submissionData.slug = submissionData.title
+          .toLowerCase()
+          .replace(/[^\w\s-]/g, '') // Remove special characters
+          .replace(/\s+/g, '-')     // Replace spaces with hyphens
+          .replace(/--+/g, '-')     // Replace multiple hyphens with single hyphen
+          .trim();                  // Trim leading/trailing spaces or hyphens
+      }
+      
       if (isEditMode) {
         await postAPI.update(id, submissionData);
         navigate(`/posts`);
