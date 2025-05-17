@@ -11,7 +11,6 @@ import BlogFooter from '../components/BlogFooter';
 import placeholderImage from '../assets/placeholder-image.js';
 import { postAPI, mediaAPI } from '../api/apiService';
 import usePostComments from '../hooks/usePostComments';
-import SocialShare from '../components/SocialShare';
 
 const PageContainer = styled.div`
   font-family: 'Inter', sans-serif;
@@ -663,6 +662,29 @@ const BlogPostPage = () => {
     }
   };
 
+  // Add back the share functions that were previously removed
+  const shareOnTwitter = () => {
+    const url = window.location.href;
+    const text = post?.title || 'Check out this post';
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const shareOnFacebook = () => {
+    const url = window.location.href;
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const shareOnLinkedIn = () => {
+    const url = window.location.href;
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+  };
+  
+  const shareOnWhatsApp = () => {
+    const url = window.location.href;
+    const text = post?.title || 'Check out this post';
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}%20${encodeURIComponent(url)}`, '_blank');
+  };
+
   const renderContent = () => {
     if (pageLoading && !post) {
       return <Message>Loading post...</Message>;
@@ -716,11 +738,23 @@ const BlogPostPage = () => {
           <CtaButton href="https://driveronhire.com" target="_blank">Hire a Driver Now</CtaButton>
         </CtaSection>
         
-        <SocialShare 
-          url={window.location.href}
-          title={post.title}
-          description={post.excerpt || post.title}
-        />
+        <ShareSection>
+          <h3>Share this post</h3>
+          <ShareButtons>
+            <ShareButton className="twitter" onClick={shareOnTwitter}>
+              Twitter
+            </ShareButton>
+            <ShareButton className="facebook" onClick={shareOnFacebook}>
+              Facebook
+            </ShareButton>
+            <ShareButton className="linkedin" onClick={shareOnLinkedIn}>
+              LinkedIn
+            </ShareButton>
+            <ShareButton className="whatsapp" onClick={shareOnWhatsApp}>
+              WhatsApp
+            </ShareButton>
+          </ShareButtons>
+        </ShareSection>
         
         {relatedPosts.length > 0 && (
           <RelatedPostsSection>

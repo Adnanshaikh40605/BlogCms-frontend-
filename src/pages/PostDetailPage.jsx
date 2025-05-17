@@ -5,7 +5,6 @@ import Button from '../components/Button';
 import Comment from '../components/Comment';
 import CommentForm from '../components/CommentForm';
 import SEO from '../components/SEO';
-import SocialShare from '../components/SocialShare';
 import { postAPI, commentAPI } from '../api/apiService';
 import { formatDate } from '../utils/dateUtils';
 import placeholderImage from '../assets/placeholder-image.js';
@@ -231,6 +230,63 @@ const CommentHeader = styled.div`
   margin-bottom: 1.5rem;
 `;
 
+const ShareSection = styled.div`
+  margin: 3rem 0;
+  padding: 1.5rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+  text-align: center;
+  
+  h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: #333;
+  }
+`;
+
+const ShareButtons = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+`;
+
+const ShareButton = styled.button`
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s;
+  font-size: 0.9rem;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+  
+  &.twitter {
+    background-color: #1DA1F2;
+    color: white;
+  }
+  
+  &.facebook {
+    background-color: #4267B2;
+    color: white;
+  }
+  
+  &.linkedin {
+    background-color: #0077B5;
+    color: white;
+  }
+  
+  &.whatsapp {
+    background-color: #25D366;
+    color: white;
+  }
+`;
+
 const PostDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -410,6 +466,29 @@ const PostDetailPage = () => {
     }
   };
   
+  // Add these share functions
+  const shareOnTwitter = () => {
+    const url = currentUrl;
+    const text = post?.title || 'Check out this post';
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const shareOnFacebook = () => {
+    const url = currentUrl;
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const shareOnLinkedIn = () => {
+    const url = currentUrl;
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+  };
+  
+  const shareOnWhatsApp = () => {
+    const url = currentUrl;
+    const text = post?.title || 'Check out this post';
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}%20${encodeURIComponent(url)}`, '_blank');
+  };
+  
   if (loading) {
     return <Message>Loading post...</Message>;
   }
@@ -468,12 +547,24 @@ const PostDetailPage = () => {
       
       <Content dangerouslySetInnerHTML={{ __html: post.content }} />
       
-      {/* Social Sharing Component */}
-      <SocialShare 
-        url={currentUrl}
-        title={post.title}
-        description={plainTextExcerpt}
-      />
+      {/* Replace SocialShare component with inline share section */}
+      <ShareSection>
+        <h3>Share this post</h3>
+        <ShareButtons>
+          <ShareButton className="twitter" onClick={shareOnTwitter}>
+            Twitter
+          </ShareButton>
+          <ShareButton className="facebook" onClick={shareOnFacebook}>
+            Facebook
+          </ShareButton>
+          <ShareButton className="linkedin" onClick={shareOnLinkedIn}>
+            LinkedIn
+          </ShareButton>
+          <ShareButton className="whatsapp" onClick={shareOnWhatsApp}>
+            WhatsApp
+          </ShareButton>
+        </ShareButtons>
+      </ShareSection>
       
       {post.images && post.images.length > 0 && (
         <AdditionalImages>

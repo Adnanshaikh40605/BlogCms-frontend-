@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { postAPI, mediaAPI } from '../api/apiService';
 import SEO from '../components/SEO';
-import SocialShare from '../components/SocialShare';
 import Image from '../components/Image';
 
 const BlogContainer = styled.div`
@@ -121,6 +120,67 @@ const BackLink = styled(Link)`
   }
 `;
 
+const ShareSection = styled.div`
+  margin: 3rem 0;
+  padding: 1.5rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+  text-align: center;
+  
+  h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: #333;
+  }
+`;
+
+const ShareButtons = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  
+  @media (max-width: 576px) {
+    flex-wrap: wrap;
+  }
+`;
+
+const ShareButton = styled.button`
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s;
+  font-size: 0.9rem;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+  
+  &.twitter {
+    background-color: #1DA1F2;
+    color: white;
+  }
+  
+  &.facebook {
+    background-color: #4267B2;
+    color: white;
+  }
+  
+  &.linkedin {
+    background-color: #0077B5;
+    color: white;
+  }
+  
+  &.whatsapp {
+    background-color: #25D366;
+    color: white;
+  }
+`;
+
 const BlogPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -193,6 +253,29 @@ const BlogPage = () => {
   const plainTextExcerpt = getPlainTextExcerpt(post.content);
   const imageUrl = post.featured_image ? mediaAPI.getImageUrl(post.featured_image) : null;
   
+  // Add share functions
+  const shareOnTwitter = () => {
+    const url = currentUrl;
+    const text = post?.title || 'Check out this blog post';
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const shareOnFacebook = () => {
+    const url = currentUrl;
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const shareOnLinkedIn = () => {
+    const url = currentUrl;
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+  };
+  
+  const shareOnWhatsApp = () => {
+    const url = currentUrl;
+    const text = post?.title || 'Check out this blog post';
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}%20${encodeURIComponent(url)}`, '_blank');
+  };
+
   return (
     <BlogContainer>
       {/* SEO Meta Tags */}
@@ -231,12 +314,24 @@ const BlogPage = () => {
 
       <BlogContent dangerouslySetInnerHTML={{ __html: post.content }} />
       
-      {/* Social Sharing Component */}
-      <SocialShare 
-        url={currentUrl}
-        title={post.title}
-        summary={plainTextExcerpt}
-      />
+      {/* Replace SocialShare with inline share section */}
+      <ShareSection>
+        <h3>Share this post</h3>
+        <ShareButtons>
+          <ShareButton className="twitter" onClick={shareOnTwitter}>
+            Twitter
+          </ShareButton>
+          <ShareButton className="facebook" onClick={shareOnFacebook}>
+            Facebook
+          </ShareButton>
+          <ShareButton className="linkedin" onClick={shareOnLinkedIn}>
+            LinkedIn
+          </ShareButton>
+          <ShareButton className="whatsapp" onClick={shareOnWhatsApp}>
+            WhatsApp
+          </ShareButton>
+        </ShareButtons>
+      </ShareSection>
     </BlogContainer>
   );
 };
